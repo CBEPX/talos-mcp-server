@@ -1,0 +1,15 @@
+.
+.gitignore
+CHANGELOG.md
+EXAMPLES.md
+LICENSE
+PROJECT_STRUCTURE.txt
+README.md
+claude_desktop_config.example.json
+pyproject.toml
+setup.sh
+src
+├── talos_mcp
+├──   __init__.py
+├──   server.py
+test_connection.py

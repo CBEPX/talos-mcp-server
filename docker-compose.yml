@@ -1,0 +1,13 @@
+services:
+  talos-mcp:
+    build: .
+    volumes:
+      - ~/.talos:/root/.talos:ro
+      - ./logs:/app/logs
+    environment:
+      - TALOSCONFIG=/root/.talos/config
+      - TALOS_MCP_LOG_LEVEL=DEBUG
+      - TALOS_MCP_READONLY=true
+    # For stdio communication, we likely want to keep stdin open or just use this for testing build
+    stdin_open: true 
+    tty: true

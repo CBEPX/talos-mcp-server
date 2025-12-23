@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "talos": {
+      "command": "/path/to/talos-mcp-server/.venv/bin/python",
+      "args": [
+        "/path/to/talos-mcp-server/src/talos_mcp/server.py"
+      ],
+      "env": {
+        "TALOSCONFIG": "${HOME}/.talos/config"
+      }
+    }
+  }
+}
