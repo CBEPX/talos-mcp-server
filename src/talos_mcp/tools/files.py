@@ -11,7 +11,7 @@ from talos_mcp.tools.base import TalosTool
 class ListFilesSchema(BaseModel):
     """Schema for list files arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
     path: str = Field(default="/", description="Directory path")
 
 
@@ -25,14 +25,15 @@ class ListFilesTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = ListFilesSchema(**arguments)
-        cmd = ["ls", args.path, "-n", args.nodes]
+        nodes = self.ensure_nodes(args.nodes)
+        cmd = ["ls", args.path, "-n", nodes]
         return await self.execute_talosctl(cmd)
 
 
 class ReadFileSchema(BaseModel):
     """Schema for read file arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
     path: str = Field(description="File path to read")
 
 
@@ -46,14 +47,18 @@ class ReadFileTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = ReadFileSchema(**arguments)
-        cmd = ["read", args.path, "-n", args.nodes]
+        nodes = self.ensure_nodes(args.nodes)
+        cmd = ["read", args.path, "-n", nodes]
         return await self.execute_talosctl(cmd)
 
 
 class CopySchema(BaseModel):
     """Schema for copy arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    # Copying to/from multiple nodes is complex. `talosctl cp` might not support it for download.
+    # Upload to multiple nodes works.
+    # Let's support it, but behavior depends on talosctl.
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
     src: str = Field(description="Source path")
     dst: str = Field(description="Destination path")
     direction: str = Field(
@@ -72,10 +77,14 @@ class CopyTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = CopySchema(**arguments)
+        nodes = self.ensure_nodes(args.nodes)
         if args.direction == "upload":
-            cmd = ["cp", args.src, f"{args.nodes}:{args.dst}"]
+            cmd = ["cp", args.src, f"{nodes}:{args.dst}"]
         else:
-            cmd = ["cp", f"{args.nodes}:{args.src}", args.dst]
+            # Downloading from multiple nodes to same local path might overwrite?
+            # talosctl might handle it (e.g. creating dirs per node).
+            # But let's assume user knows what they are doing.
+            cmd = ["cp", f"{nodes}:{args.src}", args.dst]
 
         return await self.execute_talosctl(cmd)
 
@@ -83,7 +92,7 @@ class CopyTool(TalosTool):
 class DiskUsageSchema(BaseModel):
     """Schema for disk usage arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
     path: str = Field(default="/", description="Path to check")
 
 
@@ -97,14 +106,15 @@ class DiskUsageTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = DiskUsageSchema(**arguments)
-        cmd = ["usage", args.path, "-n", args.nodes]
+        nodes = self.ensure_nodes(args.nodes)
+        cmd = ["usage", args.path, "-n", nodes]
         return await self.execute_talosctl(cmd)
 
 
 class MountsSchema(BaseModel):
     """Schema for mounts arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
 
 
 class MountsTool(TalosTool):
@@ -117,5 +127,6 @@ class MountsTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = MountsSchema(**arguments)
-        cmd = ["mounts", "-n", args.nodes]
+        nodes = self.ensure_nodes(args.nodes)
+        cmd = ["mounts", "-n", nodes]
         return await self.execute_talosctl(cmd)

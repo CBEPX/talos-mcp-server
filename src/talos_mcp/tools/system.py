@@ -11,7 +11,7 @@ from talos_mcp.tools.base import TalosTool
 class NodesSchema(BaseModel):
     """Schema for node arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
 
 
 class GetVersionTool(TalosTool):
@@ -24,7 +24,8 @@ class GetVersionTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = NodesSchema(**arguments)
-        return await self.execute_talosctl(["version", "-n", args.nodes])
+        nodes = self.ensure_nodes(args.nodes)
+        return await self.execute_talosctl(["version", "-n", nodes])
 
 
 class GetHealthTool(TalosTool):
@@ -37,7 +38,14 @@ class GetHealthTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = NodesSchema(**arguments)
-        return await self.execute_talosctl(["health", "-n", args.nodes])
+        nodes = self.ensure_nodes(args.nodes)
+        
+        # talosctl health does not support multiple nodes.
+        # It's a cluster-wide check, so we just pick the first node as the endpoint.
+        node_list = nodes.split(",")
+        target_node = node_list[0]
+        
+        return await self.execute_talosctl(["health", "-n", target_node])
 
 
 class GetStatsTool(TalosTool):
@@ -50,7 +58,8 @@ class GetStatsTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = NodesSchema(**arguments)
-        return await self.execute_talosctl(["stats", "-n", args.nodes])
+        nodes = self.ensure_nodes(args.nodes)
+        return await self.execute_talosctl(["stats", "-n", nodes])
 
 
 class GetContainersTool(TalosTool):
@@ -63,7 +72,8 @@ class GetContainersTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = NodesSchema(**arguments)
-        return await self.execute_talosctl(["containers", "-n", args.nodes])
+        nodes = self.ensure_nodes(args.nodes)
+        return await self.execute_talosctl(["containers", "-n", nodes])
 
 
 class GetProcessesTool(TalosTool):
@@ -76,7 +86,8 @@ class GetProcessesTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = NodesSchema(**arguments)
-        return await self.execute_talosctl(["processes", "-n", args.nodes])
+        nodes = self.ensure_nodes(args.nodes)
+        return await self.execute_talosctl(["processes", "-n", nodes])
 
 
 class DashboardTool(TalosTool):
@@ -104,7 +115,8 @@ class MemoryTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = NodesSchema(**arguments)
-        return await self.execute_talosctl(["memory", "-n", args.nodes])
+        nodes = self.ensure_nodes(args.nodes)
+        return await self.execute_talosctl(["memory", "-n", nodes])
 
 
 class TimeTool(TalosTool):
@@ -117,4 +129,5 @@ class TimeTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = NodesSchema(**arguments)
-        return await self.execute_talosctl(["time", "-n", args.nodes])
+        nodes = self.ensure_nodes(args.nodes)
+        return await self.execute_talosctl(["time", "-n", nodes])

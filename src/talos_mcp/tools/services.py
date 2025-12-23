@@ -11,7 +11,7 @@ from talos_mcp.tools.base import TalosTool
 class ServiceSchema(BaseModel):
     """Schema for service arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
     action: str = Field(default="status", description="Action: status, start, stop, restart")
     service: str | None = Field(default=None, description="Service name (optional for status)")
 
@@ -37,14 +37,15 @@ class ServiceTool(TalosTool):
         if args.action != "status":
             cmd.append(args.action)
 
-        cmd.extend(["-n", args.nodes])
+        nodes = self.ensure_nodes(args.nodes)
+        cmd.extend(["-n", nodes])
         return await self.execute_talosctl(cmd)
 
 
 class LogsSchema(BaseModel):
     """Schema for logs arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
     service: str = Field(description="Service name or container name")
     lines: int = Field(default=100, description="Number of lines to tail")
     follow: bool = Field(default=False, description="Follow logs")
@@ -60,7 +61,8 @@ class LogsTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = LogsSchema(**arguments)
-        cmd = ["logs", args.service, "-n", args.nodes, "--tail", str(args.lines)]
+        nodes = self.ensure_nodes(args.nodes)
+        cmd = ["logs", args.service, "-n", nodes, "--tail", str(args.lines)]
         if args.follow:
             cmd.append("--follow")
         return await self.execute_talosctl(cmd)
@@ -69,7 +71,7 @@ class LogsTool(TalosTool):
 class DmesgSchema(BaseModel):
     """Schema for dmesg arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
     follow: bool = Field(default=False, description="Follow logs")
 
 
@@ -83,7 +85,8 @@ class DmesgTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = DmesgSchema(**arguments)
-        cmd = ["dmesg", "-n", args.nodes]
+        nodes = self.ensure_nodes(args.nodes)
+        cmd = ["dmesg", "-n", nodes]
         if args.follow:
             cmd.append("--follow")
         return await self.execute_talosctl(cmd)
@@ -92,7 +95,7 @@ class DmesgTool(TalosTool):
 class EventsSchema(BaseModel):
     """Schema for events arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
     duration: str = Field(default="0s", description="Duration to stream events (0s = forever)")
 
 
@@ -106,7 +109,8 @@ class EventsTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = EventsSchema(**arguments)
-        cmd = ["events", "-n", args.nodes]
+        nodes = self.ensure_nodes(args.nodes)
+        cmd = ["events", "-n", nodes]
         # events streams forever by default.
         # We should probably limit it for MCP unless using SSE streaming properly.
         # But 'call_tool' expects a return. So we probably just want a snapshot or short duration?

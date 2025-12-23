@@ -70,3 +70,17 @@ class TalosTool(ABC):
             return [TextContent(type="text", text=f"Error executing {self.name}:\n{e.stderr}")]
         except Exception as e:
             return [TextContent(type="text", text=f"Error executing {self.name}:\n{str(e)}")]
+
+    def ensure_nodes(self, nodes: str | None) -> str:
+        """Helper to ensure nodes are set, defaulting to all cluster nodes if None.
+        
+        Args:
+            nodes: The provided nodes argument (comma-separated list or None).
+            
+        Returns:
+            Comma-separated list of nodes.
+        """
+        if not nodes or nodes.lower() in ("all", "cluster"):
+            all_nodes = self.client.get_nodes()
+            return ",".join(all_nodes)
+        return nodes

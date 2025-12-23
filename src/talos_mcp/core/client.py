@@ -66,6 +66,19 @@ class TalosClient:
             "config_path": self.config_path,
         }
 
+    def get_nodes(self) -> list[str]:
+        """Get all nodes configured in the current context.
+
+        Returns:
+            List of node IPs/hostnames.
+        """
+        if not self.config or not self.current_context:
+            return []
+        
+        contexts = self.config.get("contexts", {})
+        context_data = contexts.get(self.current_context, {})
+        return context_data.get("nodes", [])
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),

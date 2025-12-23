@@ -11,7 +11,7 @@ from talos_mcp.tools.base import TalosTool
 class GetResourceSchema(BaseModel):
     """Schema for get resource arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
     resource: str = Field(description="Resource type (e.g. members, services, machineconfig)")
     output: str = Field(default="yaml", description="Output format (yaml, json)")
 
@@ -26,14 +26,15 @@ class GetResourceTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = GetResourceSchema(**arguments)
-        cmd = ["get", args.resource, "-n", args.nodes, "-o", args.output]
+        nodes = self.ensure_nodes(args.nodes)
+        cmd = ["get", args.resource, "-n", nodes, "-o", args.output]
         return await self.execute_talosctl(cmd)
 
 
 class ListDefinitionsSchema(BaseModel):
     """Schema for list definitions arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
 
 
 class ListDefinitionsTool(TalosTool):
@@ -46,14 +47,15 @@ class ListDefinitionsTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = ListDefinitionsSchema(**arguments)
-        cmd = ["get", "rd", "-n", args.nodes]
+        nodes = self.ensure_nodes(args.nodes)
+        cmd = ["get", "rd", "-n", nodes]
         return await self.execute_talosctl(cmd)
 
 
 class GetVolumeStatusSchema(BaseModel):
     """Schema for volume status arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
     volume: str = Field(description="Volume name (optional)", default="")
     output: str = Field(default="yaml", description="Output format (yaml, json)")
 
@@ -68,7 +70,8 @@ class GetVolumeStatusTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = GetVolumeStatusSchema(**arguments)
-        cmd = ["get", "volumestatus", "-n", args.nodes, "-o", args.output]
+        nodes = self.ensure_nodes(args.nodes)
+        cmd = ["get", "volumestatus", "-n", nodes, "-o", args.output]
         if args.volume:
              cmd.insert(2, args.volume)
         return await self.execute_talosctl(cmd)
@@ -77,7 +80,7 @@ class GetVolumeStatusTool(TalosTool):
 class GetKernelParamStatusSchema(BaseModel):
     """Schema for kernel param status arguments."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
     output: str = Field(default="yaml", description="Output format (yaml, json)")
 
 
@@ -91,5 +94,6 @@ class GetKernelParamStatusTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = GetKernelParamStatusSchema(**arguments)
-        cmd = ["get", "kernelparamstatus", "-n", args.nodes, "-o", args.output]
+        nodes = self.ensure_nodes(args.nodes)
+        cmd = ["get", "kernelparamstatus", "-n", nodes, "-o", args.output]
         return await self.execute_talosctl(cmd)
