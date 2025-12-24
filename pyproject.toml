@@ -27,13 +27,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
-
-[project.urls]
-Homepage = "https://github.com/CBEPX/talos-mcp-server"
-Documentation = "https://github.com/CBEPX/talos-mcp-server#readme"
-Repository = "https://github.com/CBEPX/talos-mcp-server.git"
-Issues = "https://github.com/CBEPX/talos-mcp-server/issues"
-Changelog = "https://github.com/CBEPX/talos-mcp-server/blob/main/CHANGELOG.md"
 dependencies = [
     "mcp>=1.0.0",
     "grpclib>=0.4.7",
@@ -47,6 +40,13 @@ dependencies = [
     "pydantic-settings>=2.1.0",
     "typer>=0.9.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/CBEPX/talos-mcp-server"
+Documentation = "https://github.com/CBEPX/talos-mcp-server#readme"
+Repository = "https://github.com/CBEPX/talos-mcp-server.git"
+Issues = "https://github.com/CBEPX/talos-mcp-server/issues"
+Changelog = "https://github.com/CBEPX/talos-mcp-server/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
