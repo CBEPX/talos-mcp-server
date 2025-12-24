@@ -1,6 +1,6 @@
 [project]
 name = "talos-mcp-server"
-version = "0.3.0"
+version = "0.3.1"
 description = "MCP server for Talos Linux API integration - manage clusters with AI"
 readme = "README.md"
 license = { text = "MIT" }
@@ -73,7 +73,7 @@ dev = [
 ]
 
 [project.scripts]
-talos-mcp-server = "talos_mcp.server:main"
+talos-mcp-server = "talos_mcp.server:cli"
 
 [build-system]
 requires = ["hatchling"]

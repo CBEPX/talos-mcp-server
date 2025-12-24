@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-12-24
+
+### Fixed
+- **Critical**: Fixed server startup crash when installed via pip
+  - Typer Option defaults now use literal values instead of Settings object
+  - Entry point changed from `server:main` to `server:cli`
+- Added `envvar` support for CLI options (`TALOS_MCP_LOG_LEVEL`, `TALOS_MCP_AUDIT_LOG_PATH`, `TALOS_MCP_READONLY`)
+
 ## [0.3.0] - 2025-12-24
 
 ### Added

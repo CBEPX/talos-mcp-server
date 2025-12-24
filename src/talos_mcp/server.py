@@ -273,19 +273,23 @@ cli = typer.Typer()
 @cli.command()
 def main(
     log_level: str = typer.Option(
-        settings.log_level, help="Log level (DEBUG, INFO, WARNING, ERROR)"
+        "INFO", "--log-level", "-l", help="Log level (DEBUG, INFO, WARNING, ERROR)",
+        envvar="TALOS_MCP_LOG_LEVEL"
     ),
     audit_log: str = typer.Option(
-        settings.audit_log_path, help="Path to audit log file"
+        None, "--audit-log", help="Path to audit log file",
+        envvar="TALOS_MCP_AUDIT_LOG_PATH"
     ),
     readonly: bool = typer.Option(
-        settings.readonly, help="Enable read-only mode (prevents mutating commands)"
+        False, "--readonly", help="Enable read-only mode (prevents mutating commands)",
+        envvar="TALOS_MCP_READONLY"
     ),
 ) -> None:
     """Run the Talos MCP Server."""
     # Update global settings from CLI args
     settings.log_level = log_level
-    settings.audit_log_path = audit_log
+    if audit_log:
+        settings.audit_log_path = audit_log
     settings.readonly = readonly
 
     configure_logging()
