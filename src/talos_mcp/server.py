@@ -268,7 +268,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         return [TextContent(type="text", text=f"Error: {e!s}")]
 
 
-__version__ = "0.3.7"
+__version__ = "0.3.8"
 
 
 def version_callback(value: bool) -> None:
@@ -361,18 +361,23 @@ def main(
         asyncio.run(run_server())
     except KeyboardInterrupt:
         pass  # Already handled by signal handler
-    except* anyio.BrokenResourceError:
-        # Ignore broken stream errors during shutdown (e.g., stdin closed)
-        pass
-    except BaseExceptionGroup as eg:
-        # Filter out BrokenResourceError from exception groups
-        filtered = eg.subgroup(lambda e: not isinstance(e, anyio.BrokenResourceError))
-        if filtered:
-            logger.exception(f"Server crashed: {filtered}")
+    except BaseException as e:
+        # Handle ExceptionGroup (Python 3.11+) or regular exceptions
+        # Filter out BrokenResourceError which is expected during shutdown
+        if isinstance(e, anyio.BrokenResourceError):
+            pass  # Expected during shutdown
+        elif hasattr(e, 'exceptions'):
+            # ExceptionGroup-like: filter out BrokenResourceError
+            real_errors = [
+                exc for exc in e.exceptions 
+                if not isinstance(exc, anyio.BrokenResourceError)
+            ]
+            if real_errors:
+                logger.exception(f"Server crashed: {e}")
+                sys.exit(1)
+        elif not isinstance(e, (SystemExit, KeyboardInterrupt)):
+            logger.exception(f"Server crashed: {e}")
             sys.exit(1)
-    except Exception as e:
-        logger.exception(f"Server crashed: {e}")
-        sys.exit(1)
 
 
 if __name__ == "__main__":
