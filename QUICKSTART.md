@@ -32,20 +32,20 @@ python test_connection.py
 # Add config from claude_desktop_config.example.json
 ```
 
-## Available Tools (12 total)
+## Available Tools (44+)
 
-1. **talos_config_info** - View configuration and context
-2. **talos_get_version** - Get Talos version info
-3. **talos_get_disks** - List node disks
-4. **talos_get_services** - Service status
-5. **talos_get_resources** - Query any resource
-6. **talos_logs** - Service/container logs
-7. **talos_dashboard** - Resource usage snapshot
-8. **talos_health** - Cluster health check
-9. **talos_list** - Browse filesystem
-10. **talos_read** - Read file contents
-11. **talos_etcd_members** - etcd cluster info
-12. **talos_get_kubeconfig** - Get K8s config
+The server provides 44+ tools covering:
+
+- **System**: version, health, stats, containers, processes, dashboard, memory, time, disks, devices
+- **Files**: ls, cat, cp, du, mounts
+- **Network**: interfaces, routes, netstat, pcap
+- **Services**: service, logs, dmesg, events
+- **Cluster**: reboot, shutdown, reset, upgrade, bootstrap, cluster_show, image
+- **Config**: config_info, kubeconfig, apply, patch, machineconfig_patch, validate, gen_config
+- **Etcd**: members, snapshot, alarm, defrag
+- **Resources**: get, definitions, volume_status, kernel_param_status
+
+See [README.md](README.md#available-tools) for the full list.
 
 ## Key Features
 

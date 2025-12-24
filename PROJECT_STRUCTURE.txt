@@ -1,15 +1,52 @@
-.
-.gitignore
-CHANGELOG.md
-EXAMPLES.md
-LICENSE
-PROJECT_STRUCTURE.txt
-README.md
-claude_desktop_config.example.json
-pyproject.toml
-setup.sh
-src
-├── talos_mcp
-├──   __init__.py
-├──   server.py
-test_connection.py
+# Project Structure
+
+```
+talos-mcp-server/
+├── src/
+│   └── talos_mcp/
+│       ├── __init__.py           # Package initialization
+│       ├── server.py             # Main MCP server entrypoint
+│       ├── prompts.py            # MCP Prompts definitions
+│       ├── resources.py          # MCP Resources definitions
+│       └── core/
+│       │   ├── __init__.py
+│       │   ├── client.py         # TalosClient for talosctl execution
+│       │   ├── exceptions.py     # Custom exception classes
+│       │   └── settings.py       # Pydantic Settings configuration
+│       └── tools/
+│           ├── __init__.py
+│           ├── base.py           # Abstract TalosTool base class
+│           ├── cluster.py        # Node lifecycle (reboot, shutdown, reset, upgrade)
+│           ├── config.py         # Configuration (apply, patch, validate)
+│           ├── etcd.py           # Etcd operations (members, snapshot, alarm)
+│           ├── files.py          # File operations (ls, cat, cp, du)
+│           ├── network.py        # Network tools (interfaces, routes, netstat)
+│           ├── resources.py      # Resource queries (get, definitions)
+│           ├── services.py       # Service management (logs, events)
+│           └── system.py         # System info (version, health, stats)
+├── tests/
+│   ├── conftest.py               # Pytest fixtures
+│   ├── integration/
+│   │   ├── test_ro.py            # Read-only integration tests
+│   │   └── test_rw.py            # Read-write integration tests
+│   ├── test_base.py              # Unit tests for TalosTool
+│   ├── test_logging.py           # Logging verification tests
+│   ├── test_new_tools.py         # Unit tests for new tools
+│   ├── verify_tools.py           # Tool registration verification
+│   └── wait_for_ready.py         # Cluster readiness wait script
+├── .pre-commit-config.yaml       # Pre-commit hooks configuration
+├── CHANGELOG.md                  # Version history
+├── CONTRIBUTING.md               # Contribution guidelines
+├── Dockerfile                    # Docker build configuration
+├── EXAMPLES.md                   # Usage examples
+├── LICENSE                       # MIT License
+├── Makefile                      # Build and test automation
+├── QUICKSTART.md                 # Quick reference guide
+├── README.md                     # Main documentation
+├── claude_desktop_config.example.json  # Claude Desktop config template
+├── docker-compose.yml            # Docker Compose development setup
+├── pyproject.toml                # Project metadata and dependencies
+├── setup.sh                      # Automated setup script
+├── test_connection.py            # Connection testing utility
+└── uv.lock                       # Dependency lock file
+```

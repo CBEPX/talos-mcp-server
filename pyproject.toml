@@ -162,9 +162,7 @@ ignore = [
 ]
 "src/talos_mcp/__init__.py" = ["D104"]
 
-
-
-
+[tool.ruff.lint.isort]
 force-single-line = false
 lines-after-imports = 2
 

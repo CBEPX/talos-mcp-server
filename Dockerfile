@@ -2,7 +2,7 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 # Install talosctl
-ARG TALOSCTL_VERSION=v1.9.1
+ARG TALOSCTL_VERSION=v1.12.0
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \

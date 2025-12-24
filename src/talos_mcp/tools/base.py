@@ -69,7 +69,7 @@ class TalosTool(ABC):
         except TalosCommandError as e:
             return [TextContent(type="text", text=f"Error executing {self.name}:\n{e.stderr}")]
         except Exception as e:
-            return [TextContent(type="text", text=f"Error executing {self.name}:\n{str(e)}")]
+            return [TextContent(type="text", text=f"Error executing {self.name}:\n{e!s}")]
 
     def ensure_nodes(self, nodes: str | None) -> str:
         """Helper to ensure nodes are set, defaulting to all cluster nodes if None.

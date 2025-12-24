@@ -39,12 +39,12 @@ class GetHealthTool(TalosTool):
         """Execute the tool."""
         args = NodesSchema(**arguments)
         nodes = self.ensure_nodes(args.nodes)
-        
+
         # talosctl health does not support multiple nodes.
         # It's a cluster-wide check, so we just pick the first node as the endpoint.
         node_list = nodes.split(",")
         target_node = node_list[0]
-        
+
         return await self.execute_talosctl(["health", "-n", target_node])
 
 

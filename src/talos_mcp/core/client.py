@@ -77,14 +77,14 @@ class TalosClient:
         """
         if not self.config or not self.current_context:
             return []
-        
+
         contexts = self.config.get("contexts", {})
         context_data = contexts.get(self.current_context, {})
-        
+
         nodes = context_data.get("nodes", [])
         if nodes:
             return nodes
-            
+
         # Fallback to endpoints if nodes are not explicitly set
         # Endpoints might contain ports (e.g. 1.2.3.4:6443), which we should strip for node addressing
         endpoints = context_data.get("endpoints", [])
@@ -93,7 +93,7 @@ class TalosClient:
             if ":" in ep:
                 ep = ep.split(":")[0]
             clean_nodes.append(ep)
-            
+
         return clean_nodes
 
     @retry(
@@ -184,4 +184,4 @@ class TalosClient:
                 f"Error executing talosctl: {' '.join(cmd)}"
             )
             # Wrap unknown errors in TalosCommandError for consistency
-            raise TalosCommandError(cmd, 1, f"Execution failed: {str(e)}")
+            raise TalosCommandError(cmd, 1, f"Execution failed: {e!s}")

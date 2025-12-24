@@ -1,7 +1,9 @@
 import pytest
-from talos_mcp.tools.config import PatchTool, MachineConfigPatchTool, GenConfigTool
+
 from talos_mcp.tools.cluster import BootstrapTool, ClusterShowTool
-from talos_mcp.tools.system import DisksTool, DevicesTool
+from talos_mcp.tools.config import GenConfigTool, MachineConfigPatchTool, PatchTool
+from talos_mcp.tools.system import DevicesTool, DisksTool
+
 
 @pytest.mark.asyncio
 async def test_patch_tool(mock_talos_client):
@@ -70,7 +72,7 @@ async def test_cluster_show_tool(mock_talos_client):
     mock_talos_client.execute_talosctl.assert_called_with(
         ["cluster", "show"]
     )
-    
+
     # Test with nodes arg
     args_with_nodes = {"nodes": "10.0.0.1"}
     await tool.run(args_with_nodes)

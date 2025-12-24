@@ -141,11 +141,11 @@ class PatchTool(TalosTool):
         """Execute the tool."""
         args = PatchSchema(**arguments)
         nodes = self.ensure_nodes(args.nodes)
-        
+
         cmd = ["patch", args.type]
         if args.id:
             cmd.append(args.id)
-            
+
         cmd.extend(["-n", nodes, "--patch", args.patch, "--mode", args.mode])
         return await self.execute_talosctl(cmd)
 
@@ -169,13 +169,13 @@ class MachineConfigPatchTool(TalosTool):
         """Execute the tool."""
         args = MachineConfigPatchSchema(**arguments)
         nodes = self.ensure_nodes(args.nodes)
-        
+
         # We need to pipe the patch content to stdin since talosctl expects a file or stdin
         # constructing command with --patch is supported in newer talosctl but stdin is safer for complex yaml
         # Actually checking CLI help: `talosctl machineconfig patch [flags]` read from stdin if no file
-        # But we can also use `--patch` flag if supported. 
+        # But we can also use `--patch` flag if supported.
         # Standard way is `talosctl machineconfig patch --patch <content> -n <node>`
-        
+
         cmd = ["machineconfig", "patch", "--patch", args.patch, "-n", nodes, "--mode", args.mode]
         return await self.execute_talosctl(cmd)
 
@@ -202,7 +202,7 @@ class GenConfigTool(TalosTool):
         cmd = ["gen", "config", args.name, args.endpoint, "--output-dir", args.output_dir]
         if args.version:
             cmd.extend(["--kubernetes-version", args.version])
-            
+
         # This runs locally, does not require nodes
         return await self.execute_talosctl(cmd)
 

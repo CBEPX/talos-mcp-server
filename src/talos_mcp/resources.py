@@ -90,7 +90,7 @@ class TalosResources:
         except TalosCommandError as e:
             return f"Error getting health: {e.stderr}"
         except Exception as e:
-            return f"Error getting health: {str(e)}"
+            return f"Error getting health: {e!s}"
 
     async def _get_version(self, node: str | None) -> str:
         """Get version info for a node."""
@@ -103,7 +103,7 @@ class TalosResources:
         except TalosCommandError as e:
             return f"Error getting version: {e.stderr}"
         except Exception as e:
-            return f"Error getting version: {str(e)}"
+            return f"Error getting version: {e!s}"
 
     async def _get_config_info(self) -> str:
         """Get config info."""

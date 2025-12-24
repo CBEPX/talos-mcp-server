@@ -20,9 +20,9 @@ from mcp.types import (
 from pydantic import AnyUrl
 
 from talos_mcp.core.client import TalosClient
+from talos_mcp.core.settings import settings
 from talos_mcp.prompts import TalosPrompts
 from talos_mcp.resources import TalosResources
-from talos_mcp.core.settings import settings
 from talos_mcp.tools.cluster import (
     BootstrapTool,
     ClusterShowTool,
@@ -216,6 +216,22 @@ tools_list = [
 
 tools_map = {tool.name: tool for tool in tools_list}
 
+# Tools that perform write/mutating operations
+WRITE_TOOLS = {
+    "talos_reboot",
+    "talos_shutdown",
+    "talos_reset",
+    "talos_upgrade",
+    "talos_apply_config",
+    "talos_apply",
+    "talos_patch",
+    "talos_machineconfig_patch",
+    "talos_bootstrap",
+    "talos_etcd_defrag",
+    "talos_etcd_alarm",
+    "talos_cp",
+}
+
 
 @app_mcp.list_tools()  # type: ignore
 async def list_tools() -> list[Tool]:
@@ -226,6 +242,16 @@ async def list_tools() -> list[Tool]:
 @app_mcp.call_tool()
 async def call_tool(name: str, arguments: Any) -> list[TextContent]:
     """Handle tool calls for Talos operations."""
+    # Enforce read-only mode
+    if settings.readonly and name in WRITE_TOOLS:
+        return [
+            TextContent(
+                type="text",
+                text=f"Error: Tool '{name}' is blocked in read-only mode. "
+                "Set TALOS_MCP_READONLY=false or remove --readonly flag to enable.",
+            )
+        ]
+
     tool = tools_map.get(name)
     if not tool:
         return [TextContent(type="text", text=f"Unknown tool: {name}")]

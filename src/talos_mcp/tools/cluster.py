@@ -178,7 +178,7 @@ class BootstrapTool(TalosTool):
         """Execute the tool."""
         args = BootstrapSchema(**arguments)
         nodes = self.ensure_nodes(args.nodes)
-        
+
         # Bootstrap typically targets a single node
         # If multiple are provided, we should probably warn or just pass them (talosctl warns)
         cmd = ["bootstrap", "-n", nodes]
@@ -201,7 +201,7 @@ class ClusterShowTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = ClusterShowSchema(**arguments)
-        
+
         # cluster show doesn't require nodes usually (uses context)
         # but if nodes are provided, we can pass them
         cmd = ["cluster", "show"]

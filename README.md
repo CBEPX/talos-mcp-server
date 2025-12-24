@@ -8,12 +8,13 @@ An MCP (Model Context Protocol) server that provides seamless integration with T
 
 - 🔌 **MCP Resources**: Direct access to node health, version, and config via URI
 - 📝 **MCP Prompts**: Intelligent templates for diagnosing clusters and reviewing audits
-- 🔧 **Cluster Management**: Get version info, health status, and resource information
-- 💾 **Disk Management**: List and inspect disks on Talos nodes
-- 📊 **Monitoring**: Access logs, services, and real-time dashboard data
+- 🔧 **Cluster Management**: Bootstrap, upgrade, reset, and manage node lifecycle
+- 💾 **Disk & Hardware**: Inspect disks, mounts, PCI, USB, and system devices
+- 📊 **Monitoring**: Access logs, dmesg, services, and real-time dashboard data
 - 🔍 **File System**: Browse and read files on Talos nodes
-- 🔐 **etcd Integration**: Manage and inspect etcd cluster members
+- 🔐 **etcd Integration**: Manage members, snapshots, alarms, and defragmentation
 - ☸️ **Kubernetes Config**: Retrieve kubeconfig for cluster access
+- ⚙️ **Configuration**: Patches, validation, and machine config management
 - 📡 **Resource Inspection**: Query any Talos resource (similar to kubectl get)
 
 ## What is Talos Linux?
@@ -204,29 +205,53 @@ The server uses `Typer` for CLI arguments and `Pydantic Settings` for environmen
 
 ## Available Tools
 
-### Cluster Information
+### Cluster Lifecycle
+
+- **talos_bootstrap**: Bootstrap the cluster on a node
+- **talos_upgrade**: Upgrade Talos on a node
+- **talos_reset**: Reset a node to maintenance mode
+- **talos_reboot**: Reboot a node
+- **talos_shutdown**: Shutdown a node
+- **talos_cluster_show**: High-level cluster overview
+
+### Configuration & Management
 
 - **talos_config_info**: Get current Talos configuration and context
-- **talos_get_version**: Get Talos Linux version from nodes
+- **talos_apply_config** / **talos_apply**: Apply configuration
+- **talos_patch**: Apply generic patches to resources
+- **talos_machineconfig_patch**: Patch machine configuration
+- **talos_validate_config**: Validate configuration files
+- **talos_get_kubeconfig**: Retrieve kubeconfig
+
+### System & Hardware
+
+- **talos_get_version**: Get Talos Linux version
 - **talos_health**: Check cluster health status
+- **talos_get_disks**: List disks
+- **talos_devices**: List PCI, USB, and System devices
+- **talos_mounts**: List mount points
+- **talos_du**: Disk usage analysis
+- **talos_dashboard**: Real-time resource usage snapshot
 
-### Resource Management
+### Network & Services
 
-- **talos_get_resources**: Query any Talos resource (members, services, machineconfig, etc.)
-- **talos_get_services**: Get status of all services
-- **talos_get_disks**: List all disks on nodes
-- **talos_dashboard**: Get real-time resource usage snapshot
+- **talos_get_services**: Service status
+- **talos_interfaces**: List network interfaces
+- **talos_routes**: List network routes
+- **talos_netstat**: Network connections
+- **talos_pcap**: Capture packet data
+- **talos_logs**: Service/Container logs
+- **talos_dmesg**: Kernel logs
 
-### Logging & Debugging
+### Resources & Etcd
 
-- **talos_logs**: Get logs from services or containers
-- **talos_list**: List files and directories on nodes
-- **talos_read**: Read file contents from nodes
-
-### etcd & Kubernetes
-
-- **talos_etcd_members**: List etcd cluster members
-- **talos_get_kubeconfig**: Retrieve kubeconfig for the cluster
+- **talos_get_resources**: Query any Talos resource
+- **talos_list**: List files
+- **talos_read**: Read files
+- **talos_etcd_members**: List etcd members
+- **talos_etcd_snapshot**: Take etcd snapshot
+- **talos_etcd_alarm**: Manage etcd alarms
+- **talos_etcd_defrag**: Deprogam etcd storage
 
 ## Usage Examples
 
@@ -273,11 +298,12 @@ print(result["stdout"])
 # Install dev dependencies
 uv pip install -e ".[dev]"
 
-# Run tests
+# Run unit tests
 pytest
 
-# Run with coverage
-pytest --cov=talos_mcp tests/
+# Run integration tests (Requires Docker)
+# This will provision a local Talos cluster in Docker
+make test-integration
 ```
 
 ### Code Quality

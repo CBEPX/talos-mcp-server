@@ -1,8 +1,9 @@
 import pytest
-from mcp.types import TextContent
 from pydantic import BaseModel, Field
-from talos_mcp.tools.base import TalosTool
+
 from talos_mcp.core.exceptions import TalosCommandError
+from talos_mcp.tools.base import TalosTool
+
 
 class SchemaForTest(BaseModel):
     arg1: str = Field(description="Test argument")
@@ -79,5 +80,5 @@ async def test_talos_tool_execution(
         assert expected_error in text
     else:
         assert text.startswith("```\n")
-    
+
     assert expected_output_contains in text

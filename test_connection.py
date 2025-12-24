@@ -12,7 +12,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from talos_mcp.client import TalosClient
+from talos_mcp.core.client import TalosClient
 
 
 async def test_connection():
