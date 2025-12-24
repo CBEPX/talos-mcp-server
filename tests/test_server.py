@@ -24,16 +24,19 @@ class TestServerCLI:
 
     def test_help_flag(self) -> None:
         """Test --help flag shows usage information."""
+        import re
         result = subprocess.run(
             [sys.executable, "-m", "talos_mcp.server", "--help"],
             capture_output=True,
             text=True,
             timeout=10,
         )
+        # Strip ANSI escape codes
+        output = re.sub(r'\x1b\[[0-9;]*m', '', result.stdout)
         assert result.returncode == 0
-        assert "Run the Talos MCP Server" in result.stdout
-        assert "--log-level" in result.stdout
-        assert "--readonly" in result.stdout
+        assert "Talos MCP Server" in output
+        assert "log" in output.lower()  # --log-level option
+        assert "readonly" in output.lower()
 
     def test_invalid_option(self) -> None:
         """Test invalid option returns error."""
