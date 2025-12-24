@@ -88,32 +88,29 @@ from talos_mcp.tools.system import (
 
 
 # Configure logging
-def configure_logging(log_level: str = "INFO", audit_log_path: str = "talos_mcp_audit.log") -> None:
-    """Configure logging with detailed formatting and auditing."""
+def configure_logging() -> None:
+    """Configure logging with detailed formatting and auditing.
+    
+    Uses settings from Settings class for all configuration.
+    """
     logger.remove()  # Remove default handler
 
     # Standard stderr logging
     logger.add(
         sys.stderr,
-        format=(
-            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
-            "<level>{level: <8}</level> | "
-            "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-            "<level>{message}</level>"
-        ),
-        level=log_level.upper(),
+        format=settings.log_format,
+        level=settings.log_level.upper(),
     )
 
-    # Audit log to file (rotation 10MB, retention 10 days)
+    # Audit log to file
     logger.add(
-        audit_log_path,
-        rotation="10 MB",
-        retention="10 days",
+        settings.audit_log_path,
+        rotation=settings.audit_log_rotation,
+        retention=settings.audit_log_retention,
         level="DEBUG",
-        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {name}:{function}:{line} | {message} | {extra}",  # noqa: E501
-        serialize=True,  # Detailed JSON logging for auditing context
+        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {name}:{function}:{line} | {message} | {extra}",
+        serialize=settings.audit_log_serialize,
     )
-
 
 
 
@@ -287,11 +284,13 @@ def main(
 ) -> None:
     """Run the Talos MCP Server."""
     # Update global settings from CLI args
+    settings.log_level = log_level
+    settings.audit_log_path = audit_log
     settings.readonly = readonly
 
-    configure_logging(log_level, audit_log)
+    configure_logging()
     uvloop.install()
-    logger.info(f"Starting Talos MCP Server with log level {log_level}")
+    logger.info(f"Starting Talos MCP Server with log level {settings.log_level}")
 
     async def run_server() -> None:
         async with stdio_server() as (read_stream, write_stream):
