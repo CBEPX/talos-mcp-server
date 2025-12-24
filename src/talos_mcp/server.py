@@ -266,12 +266,25 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         return [TextContent(type="text", text=f"Error: {e!s}")]
 
 
+__version__ = "0.3.2"
+
+
+def version_callback(value: bool) -> None:
+    """Show version and exit."""
+    if value:
+        typer.echo(f"talos-mcp-server {__version__}")
+        raise typer.Exit()
+
 
 cli = typer.Typer()
 
 
 @cli.command()
 def main(
+    version: bool = typer.Option(
+        False, "--version", "-V", callback=version_callback, is_eager=True,
+        help="Show version and exit"
+    ),
     log_level: str = typer.Option(
         "INFO", "--log-level", "-l", help="Log level (DEBUG, INFO, WARNING, ERROR)",
         envvar="TALOS_MCP_LOG_LEVEL"
