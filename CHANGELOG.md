@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-12-24
+
+### Added
+- **New Tools (Gap Analysis & Parity):**
+  - **Cluster Lifecycle**: `talos_bootstrap`, `talos_reset`, `talos_shutdown`, `talos_cluster_show`, `talos_image`.
+  - **Configuration**: `talos_patch` (generic resource patch), `talos_machineconfig_patch`, `talos_gen_config`, `talos_validate_config`.
+  - **Hardware & System**: `talos_disks`, `talos_devices` (PCI/USB/System), `talos_mounts`, `talos_du`, `talos_volume_status`, `talos_kernel_param_status`.
+  - **Network**: `talos_pcap`, `talos_netstat`, `talos_routes`.
+- **Integration Testing Framework**:
+  - `make test-integration` for full-lifecycle testing against Docker-provisioned Talos clusters.
+  - Automated cluster provisioning (`make cluster-up`) and teardown (`make cluster-down`).
+  - Read-Only and Read-Write integration test suites.
+- **Observability**:
+  - Structured JSON audit logging (`talos_mcp_audit.log`).
+  - Enhanced application logging with `loguru`.
+
+### Changed
+- **Architecture**:
+  - Refactored monolithic code into modular `core` and `tools` packages.
+  - `TalosClient` now prioritizes `TALOSCONFIG` environment variable config paths.
+  - Improved `get_nodes` resolution to fallback to endpoints for dynamic clusters.
+- **Tool Logic**:
+  - `CopyTool`: Fixed `talosctl cp` execution to strictly require node flags.
+  - `TalosTool`: specific error exception handling (`TalosCommandError`).
+- **DevEx**:
+  - Added comprehensive `Makefile` targets.
+  - Strict type checking with `mypy` and linting with `ruff`.
+
 ## [0.1.0] - 2025-10-14
 
 ### Added
