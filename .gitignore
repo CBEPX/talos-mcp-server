@@ -167,3 +167,6 @@ talosconfig
 
 # Pre-commit
 .pre-commit-config.yaml.lock
+
+# Audit logs
+talos_mcp_audit.log
