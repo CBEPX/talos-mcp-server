@@ -267,7 +267,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         return [TextContent(type="text", text=f"Error: {e!s}")]
 
 
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 
 def version_callback(value: bool) -> None:
@@ -309,6 +309,13 @@ def main(
     configure_logging()
     uvloop.install()
     logger.info(f"Starting Talos MCP Server with log level {settings.log_level}")
+
+    # Hint for users running interactively
+    if sys.stdin.isatty():
+        sys.stderr.write(
+            "\n⚠️  This server expects JSON-RPC input from MCP clients (e.g., Claude Desktop).\n"
+            "    Press Ctrl+C to exit.\n\n"
+        )
 
     shutdown_event = asyncio.Event()
 
