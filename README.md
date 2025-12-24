@@ -116,10 +116,7 @@ To use this MCP server with Claude Desktop, add it to your configuration:
 {
   "mcpServers": {
     "talos": {
-      "command": "/path/to/talos-mcp-server/.venv/bin/python",
-      "args": [
-        "/path/to/talos-mcp-server/src/talos_mcp/server.py"
-      ],
+      "command": "talos-mcp-server",
       "env": {
         "TALOSCONFIG": "/path/to/your/.talos/config",
         "TALOS_MCP_LOG_LEVEL": "INFO",
@@ -138,7 +135,7 @@ To use this MCP server with Claude Desktop, add it to your configuration:
 4. Fill in the details:
    - **Name**: `talos`
    - **Type**: `stdio`
-   - **Command**: `/absolute/path/to/venv/bin/python /absolute/path/to/server.py`
+   - **Command**: `talos-mcp-server`
    - **Environment Variables**: Add `TALOSCONFIG` pointing to your config file
 
 #### Google Antigravity / Generic JSON
@@ -151,9 +148,8 @@ For other clients supporting the Model Context Protocol (including Perplexity or
 {
   "mcpServers": {
     "talos": {
-      "command": "python",
+      "command": "talos-mcp-server",
       "args": [
-        "src/talos_mcp/server.py",
         "--log-level", "DEBUG",
         "--readonly"
       ],
@@ -171,8 +167,7 @@ For other clients supporting the Model Context Protocol (including Perplexity or
 {
   "mcpServers": {
     "talos": {
-      "command": "python",
-      "args": ["src/talos_mcp/server.py"],
+      "command": "talos-mcp-server",
       "env": {
         "TALOSCONFIG": "${HOME}/.talos/config",
         "TALOS_MCP_READONLY": "true",

@@ -38,7 +38,7 @@ verify:
 	$(PYTHON) tests/verify_tools.py
 
 run:
-	$(PYTHON) src/talos_mcp/server.py
+	.venv/bin/talos-mcp-server
 
 check-deprecated:
 	$(PROSPECTOR) src/

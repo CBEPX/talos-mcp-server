@@ -52,4 +52,4 @@ VOLUME /root/.talos
 ENTRYPOINT []
 
 # Run the server
-CMD ["python", "src/talos_mcp/server.py"]
+CMD ["talos-mcp-server"]
