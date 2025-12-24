@@ -35,17 +35,27 @@ Talos Linux is a modern, secure, and immutable Linux distribution designed speci
 
 ## Installation
 
-### 1. Install uv
+### Option 1: Install from PyPI (Recommended)
 
 ```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Or using pip
-pip install uv
+pip install talos-mcp-server
 ```
 
-### 2. Install talosctl
+Or with uv:
+```bash
+uv pip install talos-mcp-server
+```
+
+### Option 2: Install from Source
+
+```bash
+git clone https://github.com/CBEPX/talos-mcp-server.git
+cd talos-mcp-server
+uv venv && source .venv/bin/activate
+uv pip install -e .
+```
+
+### Install talosctl
 
 ```bash
 # macOS
@@ -53,23 +63,6 @@ brew install siderolabs/tap/talosctl
 
 # Linux
 curl -sL https://talos.dev/install | sh
-
-# Or download directly
-curl -Lo /usr/local/bin/talosctl https://github.com/siderolabs/talos/releases/latest/download/talosctl-$(uname -s | tr "[:upper:]" "[:lower:]")-amd64
-chmod +x /usr/local/bin/talosctl
-```
-
-### 3. Clone and Setup
-
-```bash
-cd talos-mcp-server
-
-# Create virtual environment and install dependencies using uv
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install the package
-uv pip install -e .
 ```
 
 ### 4. Docker Support
