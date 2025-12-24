@@ -17,13 +17,15 @@ Thank you for your interest in contributing to Talos MCP Server!
 git clone https://github.com/CBEPX/talos-mcp-server.git
 cd talos-mcp-server
 
-# Create virtual environment
-python -m venv .venv
+# Install uv if not present
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create virtual environment and install with dev dependencies
+uv venv
 source .venv/bin/activate  # Linux/macOS
 # .venv\Scripts\activate   # Windows
 
-# Install with dev dependencies
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 
 # Install pre-commit hooks
 pre-commit install

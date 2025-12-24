@@ -71,11 +71,11 @@ See [README.md](README.md#available-tools) for the full list.
 ./setup.sh
 
 # Test
-python test_connection.py
+talos-mcp-server --version
 
 # Run server directly
 source .venv/bin/activate
-python src/talos_mcp/server.py
+talos-mcp-server
 
 # Check talosctl
 talosctl version

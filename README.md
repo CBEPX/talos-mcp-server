@@ -390,7 +390,7 @@ talosctl version --nodes <node-ip>
 
 ```bash
 # Test the server directly
-python src/talos_mcp/server.py
+talos-mcp-server --help
 
 # Check Claude Desktop logs
 # macOS: ~/Library/Logs/Claude/
