@@ -5,12 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.6] - 2025-12-24
+## [0.3.7] - 2025-12-24
 
 ### Fixed
-- Removed broken image link from README.md
-- Fixed repository URL in CONTRIBUTING.md (ry-ops → CBEPX)
-- CI: switched to `actions/setup-python` for reliable Python installation
+- Graceful handling of `BrokenResourceError` during shutdown
+- Suppresses `ExceptionGroup` errors when Ctrl+C pressed after invalid stdin input
+- Clean exit without stack traces on normal shutdown scenarios
+
+## [0.3.6] - 2025-12-24
 
 ## [0.3.5] - 2025-12-24
 

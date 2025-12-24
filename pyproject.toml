@@ -1,6 +1,6 @@
 [project]
 name = "talos-mcp-server"
-version = "0.3.6"
+version = "0.3.7"
 description = "MCP server for Talos Linux API integration - manage clusters with AI"
 readme = "README.md"
 license = { text = "MIT" }

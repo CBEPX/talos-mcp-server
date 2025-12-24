@@ -6,6 +6,7 @@ import sys
 from typing import Any
 
 import typer
+import anyio
 import uvloop
 from loguru import logger
 from mcp.server import Server
@@ -267,7 +268,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         return [TextContent(type="text", text=f"Error: {e!s}")]
 
 
-__version__ = "0.3.6"
+__version__ = "0.3.7"
 
 
 def version_callback(value: bool) -> None:
@@ -360,6 +361,15 @@ def main(
         asyncio.run(run_server())
     except KeyboardInterrupt:
         pass  # Already handled by signal handler
+    except* anyio.BrokenResourceError:
+        # Ignore broken stream errors during shutdown (e.g., stdin closed)
+        pass
+    except BaseExceptionGroup as eg:
+        # Filter out BrokenResourceError from exception groups
+        filtered = eg.subgroup(lambda e: not isinstance(e, anyio.BrokenResourceError))
+        if filtered:
+            logger.exception(f"Server crashed: {filtered}")
+            sys.exit(1)
     except Exception as e:
         logger.exception(f"Server crashed: {e}")
         sys.exit(1)
