@@ -1,6 +1,7 @@
 """Talos MCP Server."""
 
 import asyncio
+import signal
 import sys
 from typing import Any
 
@@ -266,7 +267,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         return [TextContent(type="text", text=f"Error: {e!s}")]
 
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 
 
 def version_callback(value: bool) -> None:
@@ -309,14 +310,49 @@ def main(
     uvloop.install()
     logger.info(f"Starting Talos MCP Server with log level {settings.log_level}")
 
+    shutdown_event = asyncio.Event()
+
+    def signal_handler() -> None:
+        """Handle shutdown signals gracefully."""
+        logger.info("Received shutdown signal, stopping server...")
+        shutdown_event.set()
+
     async def run_server() -> None:
-        async with stdio_server() as (read_stream, write_stream):
-            await app_mcp.run(read_stream, write_stream, app_mcp.create_initialization_options())
+        # Setup signal handlers
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(sig, signal_handler)
+
+        try:
+            async with stdio_server() as (read_stream, write_stream):
+                # Run server with shutdown monitoring
+                server_task = asyncio.create_task(
+                    app_mcp.run(read_stream, write_stream, app_mcp.create_initialization_options())
+                )
+                shutdown_task = asyncio.create_task(shutdown_event.wait())
+
+                done, pending = await asyncio.wait(
+                    [server_task, shutdown_task],
+                    return_when=asyncio.FIRST_COMPLETED
+                )
+
+                for task in pending:
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
+
+                logger.info("Server stopped by user")
+        finally:
+            # Cleanup signal handlers
+            for sig in (signal.SIGINT, signal.SIGTERM):
+                loop.remove_signal_handler(sig)
 
     try:
         asyncio.run(run_server())
     except KeyboardInterrupt:
-        logger.info("Server stopped by user")
+        pass  # Already handled by signal handler
     except Exception as e:
         logger.exception(f"Server crashed: {e}")
         sys.exit(1)
