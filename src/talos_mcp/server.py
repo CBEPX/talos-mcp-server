@@ -267,7 +267,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         return [TextContent(type="text", text=f"Error: {e!s}")]
 
 
-__version__ = "0.3.5"
+__version__ = "0.3.6"
 
 
 def version_callback(value: bool) -> None:

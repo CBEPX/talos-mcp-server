@@ -14,7 +14,7 @@ Thank you for your interest in contributing to Talos MCP Server!
 
 ```bash
 # Clone the repository
-git clone https://github.com/ry-ops/talos-mcp-server.git
+git clone https://github.com/CBEPX/talos-mcp-server.git
 cd talos-mcp-server
 
 # Create virtual environment
