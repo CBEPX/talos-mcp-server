@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-12-24
+
+### Added
+- **GitHub CI/CD Pipeline**:
+  - Lint job with ruff and mypy
+  - Test matrix for Python 3.10, 3.11, 3.12, 3.13
+  - Docker build with BuildX and GHA cache
+- **Talosctl Version Management**:
+  - `.talosctl-version` file for centralized version control
+  - Makefile targets: `show-version`, `update-talosctl-version`, `check-talosctl-update`
+  - Docker build reads version from `.talosctl-version`
+- **Docker Support**:
+  - `.dockerignore` for optimized build context
+  - `docker-build` and `docker-run` Makefile targets
+
+### Changed
+- **Configuration Centralization**:
+  - All logging settings moved to `Settings` class (Pydantic)
+  - New settings: `log_format`, `audit_log_rotation`, `audit_log_retention`, `audit_log_serialize`
+  - `configure_logging()` now uses settings instead of hardcoded values
+- **Readonly Mode**:
+  - Implemented enforcement in `call_tool()` - blocks 12 write operations when enabled
+  - Affected tools: reboot, shutdown, reset, upgrade, apply, patch, bootstrap, etcd operations
+
+### Fixed
+- Broken import in `test_connection.py` (changed to `talos_mcp.core.client`)
+- Missing `[tool.ruff.lint.isort]` section in `pyproject.toml`
+- Updated Dockerfile talosctl from v1.9.1 to v1.12.0
+
+### Documentation
+- Updated `README.md` with 44+ tools listing
+- Updated `QUICKSTART.md` with current tool count
+- Regenerated `PROJECT_STRUCTURE.txt` with modular architecture
+
 ## [0.2.0] - 2025-12-24
 
 ### Added
