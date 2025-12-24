@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Lint job with ruff and mypy
   - Test matrix for Python 3.10, 3.11, 3.12, 3.13
   - Docker build with BuildX and GHA cache
+  - **PyPI Trusted Publisher** for automated package publishing
 - **Talosctl Version Management**:
   - `.talosctl-version` file for centralized version control
   - Makefile targets: `show-version`, `update-talosctl-version`, `check-talosctl-update`
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docker Support**:
   - `.dockerignore` for optimized build context
   - `docker-build` and `docker-run` Makefile targets
+- **PyPI Package**: First public release on PyPI as `talos-mcp-server`
 
 ### Changed
 - **Configuration Centralization**:
