@@ -75,12 +75,6 @@ dev = [
 [project.scripts]
 talos-mcp-server = "talos_mcp.server:main"
 
-[project.urls]
-Homepage = "https://github.com/ry-ops/talos-mcp-server"
-Documentation = "https://github.com/ry-ops/talos-mcp-server#readme"
-Repository = "https://github.com/ry-ops/talos-mcp-server"
-Issues = "https://github.com/ry-ops/talos-mcp-server/issues"
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
