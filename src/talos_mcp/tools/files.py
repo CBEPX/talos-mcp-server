@@ -78,13 +78,16 @@ class CopyTool(TalosTool):
         """Execute the tool."""
         args = CopySchema(**arguments)
         nodes = self.ensure_nodes(args.nodes)
+        
+        # talosctl cp requires -n <node> even if the target is specified as <node>:<path>
+        # to ensure it knows which context/auth to use for that node IP.
+        
         if args.direction == "upload":
             cmd = ["cp", args.src, f"{nodes}:{args.dst}"]
         else:
-            # Downloading from multiple nodes to same local path might overwrite?
-            # talosctl might handle it (e.g. creating dirs per node).
-            # But let's assume user knows what they are doing.
             cmd = ["cp", f"{nodes}:{args.src}", args.dst]
+            
+        cmd.extend(["-n", nodes])
 
         return await self.execute_talosctl(cmd)
 

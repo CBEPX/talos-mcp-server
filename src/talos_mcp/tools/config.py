@@ -118,3 +118,91 @@ class ValidateConfigTool(TalosTool):
         args = ValidateConfigSchema(**arguments)
         cmd = ["validate", "-c", args.file, "--mode", args.mode]
         return await self.execute_talosctl(cmd)
+
+
+class PatchSchema(BaseModel):
+    """Schema for patch arguments."""
+
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames")
+    type: str = Field(description="Resource type (e.g., MachineConfig, Service)")
+    id: str | None = Field(default=None, description="Resource ID")
+    patch: str = Field(description="JSON or YAML patch content")
+    mode: Literal["strategic", "json"] = Field(default="strategic", description="Patch mode")
+
+
+class PatchTool(TalosTool):
+    """Patch resource."""
+
+    name = "talos_patch"
+    description = "Apply a patch to a specific resource"
+    args_schema = PatchSchema
+
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        """Execute the tool."""
+        args = PatchSchema(**arguments)
+        nodes = self.ensure_nodes(args.nodes)
+        
+        cmd = ["patch", args.type]
+        if args.id:
+            cmd.append(args.id)
+            
+        cmd.extend(["-n", nodes, "--patch", args.patch, "--mode", args.mode])
+        return await self.execute_talosctl(cmd)
+
+
+class MachineConfigPatchSchema(BaseModel):
+    """Schema for machineconfig patch arguments."""
+
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames")
+    patch: str = Field(description="YAML patch content")
+    mode: Literal["auto", "reboot", "no-reboot"] = Field(default="auto", description="Apply mode")
+
+
+class MachineConfigPatchTool(TalosTool):
+    """Patch machineconfig."""
+
+    name = "talos_machineconfig_patch"
+    description = "Patch the machine configuration directly"
+    args_schema = MachineConfigPatchSchema
+
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        """Execute the tool."""
+        args = MachineConfigPatchSchema(**arguments)
+        nodes = self.ensure_nodes(args.nodes)
+        
+        # We need to pipe the patch content to stdin since talosctl expects a file or stdin
+        # constructing command with --patch is supported in newer talosctl but stdin is safer for complex yaml
+        # Actually checking CLI help: `talosctl machineconfig patch [flags]` read from stdin if no file
+        # But we can also use `--patch` flag if supported. 
+        # Standard way is `talosctl machineconfig patch --patch <content> -n <node>`
+        
+        cmd = ["machineconfig", "patch", "--patch", args.patch, "-n", nodes, "--mode", args.mode]
+        return await self.execute_talosctl(cmd)
+
+
+class GenConfigSchema(BaseModel):
+    """Schema for gen config arguments."""
+
+    name: str = Field(description="Cluster name")
+    endpoint: str = Field(description="Cluster endpoint (https://VIP:6443)")
+    output_dir: str = Field(default="./", description="Output directory")
+    version: str | None = Field(default=None, description="Kubernetes version")
+
+
+class GenConfigTool(TalosTool):
+    """Generate configuration."""
+
+    name = "talos_gen_config"
+    description = "Generate a new cluster configuration (local operation)"
+    args_schema = GenConfigSchema
+
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        """Execute the tool."""
+        args = GenConfigSchema(**arguments)
+        cmd = ["gen", "config", args.name, args.endpoint, "--output-dir", args.output_dir]
+        if args.version:
+            cmd.extend(["--kubernetes-version", args.version])
+            
+        # This runs locally, does not require nodes
+        return await self.execute_talosctl(cmd)
+

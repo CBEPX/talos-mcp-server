@@ -159,3 +159,53 @@ class ImageTool(TalosTool):
         base_cmd.extend(["-n", args.nodes])
 
         return await self.execute_talosctl(base_cmd)
+
+
+class BootstrapSchema(BaseModel):
+    """Schema for bootstrap arguments."""
+
+    nodes: str = Field(description="Comma-separated list of node IPs/hostnames (usually just one)")
+
+
+class BootstrapTool(TalosTool):
+    """Bootstrap cluster."""
+
+    name = "talos_bootstrap"
+    description = "Bootstrap the etcd cluster on the specified node"
+    args_schema = BootstrapSchema
+
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        """Execute the tool."""
+        args = BootstrapSchema(**arguments)
+        nodes = self.ensure_nodes(args.nodes)
+        
+        # Bootstrap typically targets a single node
+        # If multiple are provided, we should probably warn or just pass them (talosctl warns)
+        cmd = ["bootstrap", "-n", nodes]
+        return await self.execute_talosctl(cmd)
+
+
+class ClusterShowSchema(BaseModel):
+    """Schema for cluster show arguments."""
+
+    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames (optional filter)")
+
+
+class ClusterShowTool(TalosTool):
+    """Show cluster status."""
+
+    name = "talos_cluster_show"
+    description = "High-level view of cluster members and their status"
+    args_schema = ClusterShowSchema
+
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        """Execute the tool."""
+        args = ClusterShowSchema(**arguments)
+        
+        # cluster show doesn't require nodes usually (uses context)
+        # but if nodes are provided, we can pass them
+        cmd = ["cluster", "show"]
+        if args.nodes:
+            cmd.extend(["-n", args.nodes])
+
+        return await self.execute_talosctl(cmd)

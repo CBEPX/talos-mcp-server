@@ -24,6 +24,8 @@ from talos_mcp.prompts import TalosPrompts
 from talos_mcp.resources import TalosResources
 from talos_mcp.core.settings import settings
 from talos_mcp.tools.cluster import (
+    BootstrapTool,
+    ClusterShowTool,
     ImageTool,
     RebootTool,
     ResetTool,
@@ -34,7 +36,10 @@ from talos_mcp.tools.config import (
     ApplyConfigTool,
     ApplyTool,
     ConfigInfoTool,
+    GenConfigTool,
     GetKubeconfigTool,
+    MachineConfigPatchTool,
+    PatchTool,
     ValidateConfigTool,
 )
 from talos_mcp.tools.etcd import (
@@ -70,6 +75,8 @@ from talos_mcp.tools.services import (
 )
 from talos_mcp.tools.system import (
     DashboardTool,
+    DevicesTool,
+    DisksTool,
     GetContainersTool,
     GetHealthTool,
     GetProcessesTool,
@@ -160,6 +167,8 @@ tools_list = [
     DashboardTool(talos_client),
     MemoryTool(talos_client),
     TimeTool(talos_client),
+    DisksTool(talos_client),
+    DevicesTool(talos_client),
     # Files
     ListFilesTool(talos_client),
     ReadFileTool(talos_client),
@@ -182,6 +191,8 @@ tools_list = [
     ResetTool(talos_client),
     UpgradeTool(talos_client),
     ImageTool(talos_client),
+    BootstrapTool(talos_client),
+    ClusterShowTool(talos_client),
     # Etcd
     EtcdMembersTool(talos_client),
     EtcdSnapshotTool(talos_client),
@@ -193,6 +204,9 @@ tools_list = [
     ApplyConfigTool(talos_client),
     ApplyTool(talos_client),
     ValidateConfigTool(talos_client),
+    PatchTool(talos_client),
+    MachineConfigPatchTool(talos_client),
+    GenConfigTool(talos_client),
     # Resources
     GetResourceTool(talos_client),
     ListDefinitionsTool(talos_client),

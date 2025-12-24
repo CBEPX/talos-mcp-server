@@ -25,7 +25,10 @@ class TalosClient:
             config_path: Path to talosconfig file. Defaults to ~/.talos/config.
         """
         self.config_path = (
-            config_path or settings.talos_config_path or os.path.expanduser("~/.talos/config")
+            config_path
+            or os.environ.get("TALOSCONFIG")
+            or settings.talos_config_path
+            or os.path.expanduser("~/.talos/config")
         )
         self.config: dict[str, Any] | None = None
         self.current_context: str | None = None
@@ -77,7 +80,21 @@ class TalosClient:
         
         contexts = self.config.get("contexts", {})
         context_data = contexts.get(self.current_context, {})
-        return context_data.get("nodes", [])
+        
+        nodes = context_data.get("nodes", [])
+        if nodes:
+            return nodes
+            
+        # Fallback to endpoints if nodes are not explicitly set
+        # Endpoints might contain ports (e.g. 1.2.3.4:6443), which we should strip for node addressing
+        endpoints = context_data.get("endpoints", [])
+        clean_nodes = []
+        for ep in endpoints:
+            if ":" in ep:
+                ep = ep.split(":")[0]
+            clean_nodes.append(ep)
+            
+        return clean_nodes
 
     @retry(
         stop=stop_after_attempt(3),

@@ -39,3 +39,27 @@ run:
 
 check-deprecated:
 	$(PROSPECTOR) src/
+
+# Integration Testing targets
+CLUSTER_NAME ?= talos-mcp-test
+LOCAL_CONFIG ?= $(PWD)/talosconfig
+
+cluster-up:
+	rm -f $(LOCAL_CONFIG)
+	TALOSCONFIG=$(LOCAL_CONFIG) talosctl cluster create --name $(CLUSTER_NAME) --provisioner docker --workers 0 --talosconfig $(LOCAL_CONFIG)
+	@echo "Cluster created. Waiting for API availability..."
+	TALOSCONFIG=$(LOCAL_CONFIG) $(PYTHON) tests/wait_for_ready.py
+
+cluster-down:
+	talosctl cluster destroy --name $(CLUSTER_NAME) --provisioner docker
+	rm -f $(LOCAL_CONFIG)
+
+test-integration:
+	@echo "Starting integration tests..."
+	$(MAKE) cluster-up
+	# Run Read-Only tests
+	TALOS_MCP_READONLY=true TALOSCONFIG=$(LOCAL_CONFIG) $(PYTEST) tests/integration/test_ro.py
+	# Run Read-Write tests
+	TALOS_MCP_READONLY=false TALOSCONFIG=$(LOCAL_CONFIG) $(PYTEST) tests/integration/test_rw.py
+	$(MAKE) cluster-down
+

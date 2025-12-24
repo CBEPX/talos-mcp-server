@@ -131,3 +131,32 @@ class TimeTool(TalosTool):
         args = NodesSchema(**arguments)
         nodes = self.ensure_nodes(args.nodes)
         return await self.execute_talosctl(["time", "-n", nodes])
+
+
+class DisksTool(TalosTool):
+    """Get disks."""
+
+    name = "talos_disks"
+    description = "List disk drives and their properties"
+    args_schema = NodesSchema
+
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        """Execute the tool."""
+        args = NodesSchema(**arguments)
+        nodes = self.ensure_nodes(args.nodes)
+        return await self.execute_talosctl(["get", "disks", "-n", nodes])
+
+
+class DevicesTool(TalosTool):
+    """Get devices (PCI, USB, etc)."""
+
+    name = "talos_devices"
+    description = "List hardware devices (PCI, USB, System) via resource definitions"
+    args_schema = NodesSchema
+
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        """Execute the tool."""
+        args = NodesSchema(**arguments)
+        nodes = self.ensure_nodes(args.nodes)
+        return await self.execute_talosctl(["get", "devices", "-n", nodes])
+
