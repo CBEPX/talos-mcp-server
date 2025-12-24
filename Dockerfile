@@ -1,14 +1,21 @@
 # Use a Python image with uv pre-installed
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-# Install talosctl
-ARG TALOSCTL_VERSION=v1.12.0
+# Install talosctl - version is read from .talosctl-version file
+# Override at build time with: docker build --build-arg TALOSCTL_VERSION=vX.Y.Z
+ARG TALOSCTL_VERSION
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy version file and install talosctl
+COPY .talosctl-version /tmp/.talosctl-version
+RUN TALOSCTL_VERSION=${TALOSCTL_VERSION:-$(cat /tmp/.talosctl-version | tr -d '[:space:]')} \
+    && echo "Installing talosctl ${TALOSCTL_VERSION}" \
     && curl -Lo /usr/local/bin/talosctl https://github.com/siderolabs/talos/releases/download/${TALOSCTL_VERSION}/talosctl-linux-amd64 \
-    && chmod +x /usr/local/bin/talosctl
+    && chmod +x /usr/local/bin/talosctl \
+    && rm /tmp/.talosctl-version
 
 # Set up the application directory
 WORKDIR /app
