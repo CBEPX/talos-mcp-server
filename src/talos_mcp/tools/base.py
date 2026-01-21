@@ -14,8 +14,10 @@ class TalosTool(ABC):
     """Base class for all Talos MCP tools."""
 
     name: ClassVar[str]
+    name: ClassVar[str]
     description: ClassVar[str]
     args_schema: ClassVar[type[BaseModel]]  # Renamed from input_schema to be explicit
+    is_mutation: ClassVar[bool] = False  # Set to True for tools that modify state
 
     def __init__(self, client: TalosClient) -> None:
         """Initialize the tool.

@@ -89,6 +89,10 @@ from talos_mcp.tools.system import (
 )
 
 
+# New tools moved from new_features
+from talos_mcp.tools.cgroups import CgroupsTool
+from talos_mcp.tools.volumes import VolumesTool
+from talos_mcp.tools.support import SupportTool
 # Configure logging
 def configure_logging() -> None:
     """Configure logging with detailed formatting and auditing.
@@ -118,9 +122,16 @@ def configure_logging() -> None:
 
 # Initialize the MCP server
 app_mcp = Server("talos-mcp-server")
-talos_client = TalosClient()
-talos_resources = TalosResources(talos_client)
+
+# Initialize Talos client
+# Try to load config from defaults if not provided
+talos_client = TalosClient(config_path=settings.talos_config_path)
+
+# Initialize prompts
 talos_prompts = TalosPrompts(talos_client)
+
+# Initialize resources
+talos_resources = TalosResources(talos_client)  # type: ignore
 
 
 # Register Resources Handlers
@@ -211,6 +222,10 @@ tools_list = [
     ListDefinitionsTool(talos_client),
     GetVolumeStatusTool(talos_client),
     GetKernelParamStatusTool(talos_client),
+    # New Features (Talos 1.12+)
+    CgroupsTool(talos_client),
+    VolumesTool(talos_client),
+    SupportTool(talos_client),
 ]
 
 tools_map = {tool.name: tool for tool in tools_list}
@@ -229,6 +244,9 @@ WRITE_TOOLS = {
     "talos_etcd_defrag",
     "talos_etcd_alarm",
     "talos_cp",
+    # New Write Tools
+    "talos_cgroups",  # has kill action
+    "talos_volumes",  # has unmount action
 }
 
 
@@ -268,7 +286,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         return [TextContent(type="text", text=f"Error: {e!s}")]
 
 
-__version__ = "0.3.8"
+__version__ = "0.4.0"
 
 
 def version_callback(value: bool) -> None:
@@ -324,6 +342,35 @@ def main(
         """Handle shutdown signals gracefully."""
         logger.info("Received shutdown signal, stopping server...")
         shutdown_event.set()
+
+    # List of tools that modify state
+    WRITE_TOOLS = {
+        "talos_reboot", "talos_shutdown", "talos_reset", "talos_upgrade",
+        "talos_apply_config", "talos_apply", "talos_patch", "talos_machineconfig_patch",
+        "talos_bootstrap", "talos_etcd_defrag", "talos_etcd_alarm", "talos_cp",
+        "talos_image_pull", "talos_image_default", "talos_image_create_cache"
+    }
+
+    # Intercept tool calls to check for readonly mode
+    original_call_tool = app_mcp.call_tool
+
+    @app_mcp.call_tool()
+    async def call_tool_wrapper(name: str, arguments: Any) -> list[TextContent]:
+        tool = tools_map.get(name)
+        
+        # Robust Read-Only Check: Check the tool's is_mutation flag
+        if settings.readonly:
+            # Check explicit flag on the tool instance/class
+            if tool and getattr(tool, "is_mutation", False):
+                logger.warning(f"Blocked write operation in readonly mode: {name}")
+                return [TextContent(type="text", text=f"Error: Tool '{name}' is blocked in read-only mode.")]
+            
+            # Fallback: Check safety list (Legacy support/Double check)
+            if name in WRITE_TOOLS:
+                logger.warning(f"Blocked write operation in readonly mode (legacy set): {name}")
+                return [TextContent(type="text", text=f"Error: Tool '{name}' is blocked in read-only mode.")]
+
+        return await original_call_tool(name, arguments)
 
     async def run_server() -> None:
         # Setup signal handlers

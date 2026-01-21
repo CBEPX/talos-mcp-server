@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-21
+
+### Added
+- **Talos 1.12+ Support**:
+  - `talos_cgroups`: Manage cgroups (Talos 1.9+).
+  - `talos_volumes`: Manage user volumes (Talos 1.12+).
+  - `talos_support`: Generate support bundles.
+- **Architectural Safety**:
+  - Implemented robust `is_mutation` flag on `TalosTool` class for decentralized Read-Only enforcement.
+  - Improved `server.py` to use bottom-up safety checks.
+
+### Changed
+- **Refactoring**:
+  - Merged `tools/new_features` into the core `tools/` structure.
+  - Standardized tool location.
+- **Documentation**:
+  - Updated `AGENTS.md` with strict documentation maintenance rules.
+  - Updated `README.md` with new tools.
+
 ## [0.3.8] - 2025-12-24
 
 ### Fixed

@@ -3,7 +3,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 # Install talosctl - version is read from .talosctl-version file
 # Override at build time with: docker build --build-arg TALOSCTL_VERSION=vX.Y.Z
-ARG TALOSCTL_VERSION
+ARG TALOSCTL_VERSION=v1.12.1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \

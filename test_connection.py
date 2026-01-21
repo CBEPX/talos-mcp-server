@@ -42,25 +42,23 @@ async def test_connection():
 
     # Test 2: Check talosctl
     print("2️⃣  Testing talosctl command...")
-    result = await client.execute_talosctl(["version", "--client"])
-
-    if result["success"]:
+    try:
+        result = await client.execute_talosctl(["version", "--client"])
         print("   ✅ talosctl is working")
         # Print first line of version output
         version_line = result["stdout"].split("\n")[0] if result["stdout"] else ""
         if version_line:
             print(f"      {version_line}")
         print()
-    else:
-        print(f"   ❌ talosctl failed: {result.get('stderr', 'Unknown error')}")
+    except Exception as e:
+        print(f"   ❌ talosctl failed: {e}")
         print()
         return False
 
     # Test 3: Try to connect to cluster
     print("3️⃣  Testing cluster connection...")
-    result = await client.execute_talosctl(["version"])
-
-    if result["success"]:
+    try:
+        result = await client.execute_talosctl(["version"])
         print("   ✅ Successfully connected to Talos cluster")
         print()
         # Print version info
@@ -68,9 +66,9 @@ async def test_connection():
             if line.strip():
                 print(f"      {line}")
         print()
-    else:
+    except Exception as e:
         print("   ⚠️  Could not connect to cluster")
-        print(f"      {result.get('stderr', 'Unknown error')}")
+        print(f"      {e}")
         print()
         print("   This might be expected if your cluster is not running.")
         print("   The MCP server is configured correctly, but cluster is unreachable.")

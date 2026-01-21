@@ -239,6 +239,12 @@ The server uses `Typer` for CLI arguments and `Pydantic Settings` for environmen
 - **talos_etcd_alarm**: Manage etcd alarms
 - **talos_etcd_defrag**: Deprogam etcd storage
 
+### New Features (Talos 1.12+)
+
+- **talos_cgroups**: Manage cgroups
+- **talos_volumes**: Manage user volumes
+- **talos_support**: Generate support bundles
+
 ## Usage Examples
 
 ### With Claude Desktop
