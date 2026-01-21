@@ -1,0 +1,35 @@
+---
+description: "Talos MCP Server Development Rules & Context"
+globs: ["**/*.py", "tests/**/*.py", "Makefile"]
+---
+
+# Talos MCP Server Development Rules
+
+You are working on the **Talos MCP Server**, a Model Context Protocol server for managing Talos Linux clusters.
+For full architectural guidelines and detailed protocols, refer to `AGENTS.md`.
+
+## Project Architecture
+- **Core**: `src/talos_mcp/core/` (Client, Settings, Exceptions)
+- **Tools**: `src/talos_mcp/tools/` (Modular tool implementations)
+- **Server**: `src/talos_mcp/server.py` (Entry point, MCP registration)
+- **Tests**: `tests/` (pytest, integration tests)
+
+## Coding Standards (Clean Code)
+1.  **Type Hints**: Strict usage of `typing` module. All functions must have return type hints.
+2.  **Docstrings**: Google-style docstrings for all classes and functions.
+3.  **Read-Only Safety**:
+    - All mutating tools MUST set `is_mutation = True` in their class definition.
+    - `server.py` enforces read-only mode by checking this flag.
+4.  **Error Handling**:
+    - Use `TalosCommandError` for CLI failures.
+    - Catch specific exceptions, never bare `except:`.
+5.  **Logging**: Use `loguru` (imported as `logger`). Do not use standard `logging`.
+
+## Testing
+- **Unit Tests**: Run with `make test`.
+- **Integration Tests**: `make test-integration` (Requires sudo/Docker).
+- **Manual Verification**: `python tests/manual_verification.py`.
+
+## Versioning
+- Version is defined in `src/talos_mcp/server.py` and `pyproject.toml`.
+- Keep `CHANGELOG.md` updated.

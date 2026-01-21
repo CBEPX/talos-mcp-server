@@ -8,6 +8,7 @@ from talos_mcp.tools.base import TalosTool
 class SchemaForTest(BaseModel):
     arg1: str = Field(description="Test argument")
 
+
 class ToolForTest(TalosTool):
     name = "test_tool"
     description = "A test tool"
@@ -17,6 +18,7 @@ class ToolForTest(TalosTool):
         args = SchemaForTest(**arguments)
         return await self.execute_talosctl(["echo", args.arg1])
 
+
 @pytest.mark.asyncio
 async def test_talos_tool_definition(mock_talos_client):
     tool = ToolForTest(mock_talos_client)
@@ -24,6 +26,7 @@ async def test_talos_tool_definition(mock_talos_client):
     assert definition.name == "test_tool"
     assert definition.description == "A test tool"
     assert "arg1" in definition.inputSchema["properties"]
+
 
 @pytest.mark.parametrize(
     "name, mock_response, mock_side_effect, inputs, expected_output_contains, expected_error",

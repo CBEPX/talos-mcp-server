@@ -86,17 +86,31 @@ talos-mcp-server/
 │   └── talos_mcp/
 │       ├── __init__.py       # Package initialization
 │       ├── server.py         # Main MCP server
-│       ├── client.py         # TalosClient wrapper
-│       ├── config.py         # Configuration management
+│       ├── prompts.py        # MCP prompts
+│       ├── resources.py      # MCP resources
 │       ├── py.typed          # PEP 561 marker
+│       ├── core/             # Core modules
+│       │   ├── __init__.py
+│       │   ├── client.py     # TalosClient wrapper
+│       │   ├── settings.py   # Configuration management
+│       │   └── exceptions.py # Custom exceptions
 │       └── tools/            # Tool implementations
 │           ├── __init__.py
 │           ├── base.py       # Base tool class
 │           ├── system.py     # System inspection tools
 │           ├── files.py      # File operation tools
-│           └── ...
+│           ├── cluster.py    # Cluster lifecycle tools
+│           ├── config.py     # Configuration tools
+│           ├── etcd.py       # Etcd management tools
+│           ├── network.py    # Network tools
+│           ├── services.py   # Services tools
+│           ├── resources.py  # Resource tools
+│           ├── cgroups.py    # Cgroups tools
+│           ├── volumes.py    # Volumes tools
+│           └── support.py    # Support bundle tools
 ├── tests/
 │   ├── conftest.py           # Pytest fixtures
+│   ├── integration/          # Integration tests
 │   └── test_*.py             # Test files
 ├── pyproject.toml            # Project configuration
 ├── .pre-commit-config.yaml   # Pre-commit hooks

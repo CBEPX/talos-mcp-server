@@ -13,6 +13,7 @@ async def test_version_integration():
     assert len(results) > 0
     assert "Tag" in results[0].text  # Should contain version info
 
+
 @pytest.mark.asyncio
 async def test_health_integration():
     client = TalosClient()
@@ -23,6 +24,7 @@ async def test_health_integration():
     assert len(results) > 0
     # Output should not be an error
     assert "Error:" not in results[0].text
+
 
 @pytest.mark.asyncio
 async def test_ls_integration():

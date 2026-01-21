@@ -170,3 +170,8 @@ talosconfig
 
 # Audit logs
 talos_mcp_audit.log
+
+# Implementation reports (local only)
+IMPLEMENTATION_SUMMARY.md
+IMPROVEMENTS.md
+FINAL_REPORT.md

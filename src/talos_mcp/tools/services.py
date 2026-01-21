@@ -11,7 +11,10 @@ from talos_mcp.tools.base import TalosTool
 class ServiceSchema(BaseModel):
     """Schema for service arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
+    nodes: str | None = Field(
+        default=None,
+        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+    )
     action: str = Field(default="status", description="Action: status, start, stop, restart")
     service: str | None = Field(default=None, description="Service name (optional for status)")
 
@@ -45,7 +48,10 @@ class ServiceTool(TalosTool):
 class LogsSchema(BaseModel):
     """Schema for logs arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
+    nodes: str | None = Field(
+        default=None,
+        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+    )
     service: str = Field(description="Service name or container name")
     lines: int = Field(default=100, description="Number of lines to tail")
     follow: bool = Field(default=False, description="Follow logs")
@@ -71,7 +77,10 @@ class LogsTool(TalosTool):
 class DmesgSchema(BaseModel):
     """Schema for dmesg arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
+    nodes: str | None = Field(
+        default=None,
+        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+    )
     follow: bool = Field(default=False, description="Follow logs")
 
 
@@ -95,7 +104,10 @@ class DmesgTool(TalosTool):
 class EventsSchema(BaseModel):
     """Schema for events arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
+    nodes: str | None = Field(
+        default=None,
+        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+    )
     duration: str = Field(default="0s", description="Duration to stream events (0s = forever)")
 
 

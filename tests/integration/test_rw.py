@@ -12,10 +12,7 @@ async def test_service_restart_integration():
 
     # Restart kubelet (safe for test cluster)
     # We use 'restart' action on 'kubelet'
-    results = await tool.run({
-        "action": "restart",
-        "service": "kubelet"
-    })
+    results = await tool.run({"action": "restart", "service": "kubelet"})
 
     # talosctl service restart usually returns empty output on success,
     # or just doesn't error out.

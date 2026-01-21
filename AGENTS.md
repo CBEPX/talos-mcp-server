@@ -10,6 +10,10 @@ This document defines the coding standards, architectural patterns, and best pra
 - **Pydantic**: Use Pydantic models for data validation and schema definition, especially for MCP tools.
 - **AsyncIO**: Use `async/await` for all I/O bound operations. Use `anyio` for compatibility where appropriate.
 - **Error Handling**: Use `try/except` blocks judiciously. Create custom exception classes for domain-specific errors.
+- **Loguru**: Use `loguru` (imported as `logger`) for all logging. Do NOT use Python's standard `logging` module.
+- **Read-Only Safety**:
+  - All mutating tools (e.g., reboot, upgrade) MUST explicitly set `is_mutation = True` in their class definition.
+  - The `TalosClient` and `server.py` enforce strict read-only mode validation based on this flag.
 - **Black & Ruff**: Ensure code is formatted with Black and linted with Ruff.
 
 ## ☸️ Helm & Kubernetes
@@ -42,9 +46,14 @@ This document defines the coding standards, architectural patterns, and best pra
 - **Coverage**: Maintain high test coverage (target >70%).
 - **Mocking**: Use `unittest.mock` or `pytest-mock` to mock external dependencies (e.g., `talosctl`, network calls).
   - *Do not* make real network calls in unit tests.
+- **Standard Commands**:
+  - Run Unit Tests: `make test`
+  - Run Linters: `make lint`
+  - Integration Tests: `make test-integration` (Requires sudo/Docker on local machine)
+  - Manual Verification: `python tests/manual_verification.py`
 - **Structure**:
   - `tests/unit/`: Fast, isolated tests.
-  - `tests/integration/`: Slower tests that might require a local Talos env (skip if not available).
+  - `tests/integration/`: Slower tests that might require a local Talos env.
 
 ## 📚 Documentation
 

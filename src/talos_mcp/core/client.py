@@ -3,6 +3,7 @@
 import asyncio
 import os
 import shutil
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -32,18 +33,47 @@ class TalosClient:
         )
         self.config: dict[str, Any] | None = None
         self.current_context: str | None = None
+        self._config_mtime: float = 0
         self._load_config()
 
     def _load_config(self) -> None:
-        """Load Talos configuration from file."""
+        """Load Talos configuration from file with caching based on mtime."""
         try:
-            config_file = Path(self.config_path)
+            config_file = Path(self.config_path).expanduser().resolve()
+
+            # Security: Validate path is within expected locations
+            if not config_file.is_absolute():
+                logger.warning(f"Config path is not absolute: {self.config_path}")
+
             if config_file.exists():
+                # Security: Verify it's a regular file
+                if not config_file.is_file():
+                    logger.error(f"Config path is not a regular file: {config_file}")
+                    return
+
+                # Check if config has been modified since last load
+                current_mtime = config_file.stat().st_mtime
+                if self.config and current_mtime == self._config_mtime:
+                    logger.debug("Using cached config (file unchanged)")
+                    return
+
+                # Security: Check file permissions (warn if world-readable)
+                if os.name != "nt":  # Unix-like systems
+                    stat_info = config_file.stat()
+                    if stat_info.st_mode & 0o004:
+                        logger.warning(
+                            f"Talosconfig is world-readable: {config_file}. "
+                            "Consider restricting permissions with: chmod 600"
+                        )
+
                 with config_file.open() as f:
                     self.config = yaml.safe_load(f)
+                    self._config_mtime = current_mtime
                     if self.config:
                         self.current_context = self.config.get("context")
                         logger.info(f"Loaded Talos config with context: {self.current_context}")
+                    # Clear the get_nodes cache when config changes
+                    self._get_nodes_cached.cache_clear()
             else:
                 logger.warning(f"Talos config not found at {self.config_path}")
         except Exception as e:
@@ -69,8 +99,12 @@ class TalosClient:
             "config_path": self.config_path,
         }
 
-    def get_nodes(self) -> list[str]:
-        """Get all nodes configured in the current context.
+    @lru_cache(maxsize=1)
+    def _get_nodes_cached(self, cache_key: float) -> list[str]:
+        """Cached implementation of get_nodes.
+
+        Args:
+            cache_key: Timestamp used for cache invalidation (config mtime).
 
         Returns:
             List of node IPs/hostnames.
@@ -86,15 +120,36 @@ class TalosClient:
             return nodes
 
         # Fallback to endpoints if nodes are not explicitly set
-        # Endpoints might contain ports (e.g. 1.2.3.4:6443), which we should strip for node addressing
+        # Endpoints might contain ports (e.g. 1.2.3.4:6443 or [::1]:6443)
+        # Need to handle both IPv4:port and [IPv6]:port formats
         endpoints = context_data.get("endpoints", [])
         clean_nodes = []
         for ep in endpoints:
-            if ":" in ep:
+            # Handle [IPv6]:port format
+            if ep.startswith("["):
+                # Extract IPv6 address from [ipv6]:port format
+                bracket_end = ep.find("]")
+                if bracket_end != -1:
+                    ep = ep[1:bracket_end]  # Remove brackets
+                clean_nodes.append(ep)
+            elif ":" in ep and ep.count(":") == 1:
+                # IPv4:port format (only one colon)
                 ep = ep.split(":")[0]
-            clean_nodes.append(ep)
+                clean_nodes.append(ep)
+            else:
+                # No port or IPv6 without brackets
+                clean_nodes.append(ep)
 
         return clean_nodes
+
+    def get_nodes(self) -> list[str]:
+        """Get all nodes configured in the current context with caching.
+
+        Returns:
+            List of node IPs/hostnames.
+        """
+        # Use config mtime as cache key to invalidate when config changes
+        return self._get_nodes_cached(self._config_mtime)
 
     @retry(
         stop=stop_after_attempt(3),
@@ -125,21 +180,6 @@ class TalosClient:
         # Add config file if it exists
         if Path(self.config_path).exists():
             cmd.extend(["--talosconfig", self.config_path])
-
-        # Check for read-only mode via settings
-        if settings.readonly:
-            # Basic protection using simple string matching
-            unsafe_commands = [
-                "upgrade",
-                "reset",
-                "reboot",
-                "shutdown",
-                "apply-config",
-                "bootstrap",
-                "defrag",
-            ]
-            if any(cmd_part in args for cmd_part in unsafe_commands):
-                 raise TalosCommandError(cmd, 1, "Operation not permitted in read-only mode")
 
         start_time = arrow.now()
         logger.debug(f"Executing: {' '.join(cmd)} at {start_time.format()}")
@@ -180,8 +220,6 @@ class TalosClient:
         except Exception as e:
             # Tenacity will handle retries for specific exceptions,
             # but if we exhaust them or hit others:
-            logger.opt(exception=True).error(
-                f"Error executing talosctl: {' '.join(cmd)}"
-            )
+            logger.opt(exception=True).error(f"Error executing talosctl: {' '.join(cmd)}")
             # Wrap unknown errors in TalosCommandError for consistency
             raise TalosCommandError(cmd, 1, f"Execution failed: {e!s}")

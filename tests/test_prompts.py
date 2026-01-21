@@ -1,10 +1,11 @@
 """Tests for prompts module."""
 
-import pytest
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock
 
-from talos_mcp.prompts import TalosPrompts
+import pytest
+
 from talos_mcp.core.client import TalosClient
+from talos_mcp.prompts import TalosPrompts
 
 
 @pytest.fixture
@@ -27,7 +28,7 @@ class TestTalosPrompts:
         """Test list_prompts returns expected prompts."""
         result = await prompts.list_prompts()
         assert len(result) == 2
-        
+
         names = [p.name for p in result]
         assert "diagnose_cluster" in names
         assert "audit_review" in names
@@ -35,7 +36,7 @@ class TestTalosPrompts:
     async def test_list_prompts_has_arguments(self, prompts: TalosPrompts) -> None:
         """Test prompts have proper arguments defined."""
         result = await prompts.list_prompts()
-        
+
         diagnose = next(p for p in result if p.name == "diagnose_cluster")
         assert len(diagnose.arguments) == 1
         assert diagnose.arguments[0].name == "node"

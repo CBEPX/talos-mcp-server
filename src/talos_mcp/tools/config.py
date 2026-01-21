@@ -67,6 +67,7 @@ class ApplyConfigTool(TalosTool):
     name = "talos_apply_config"
     description = "Apply a new configuration to node(s) - Deprecated in 1.12, use talos_apply"
     args_schema = ApplyConfigSchema
+    is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -89,6 +90,7 @@ class ApplyTool(TalosTool):
     name = "talos_apply"
     description = "Apply a manifest to node(s) (new in 1.12)"
     args_schema = ApplySchema
+    is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -123,7 +125,9 @@ class ValidateConfigTool(TalosTool):
 class PatchSchema(BaseModel):
     """Schema for patch arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(
+        default=None, description="Comma-separated list of node IPs/hostnames"
+    )
     type: str = Field(description="Resource type (e.g., MachineConfig, Service)")
     id: str | None = Field(default=None, description="Resource ID")
     patch: str = Field(description="JSON or YAML patch content")
@@ -136,6 +140,7 @@ class PatchTool(TalosTool):
     name = "talos_patch"
     description = "Apply a patch to a specific resource"
     args_schema = PatchSchema
+    is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -153,7 +158,9 @@ class PatchTool(TalosTool):
 class MachineConfigPatchSchema(BaseModel):
     """Schema for machineconfig patch arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames")
+    nodes: str | None = Field(
+        default=None, description="Comma-separated list of node IPs/hostnames"
+    )
     patch: str = Field(description="YAML patch content")
     mode: Literal["auto", "reboot", "no-reboot"] = Field(default="auto", description="Apply mode")
 
@@ -164,6 +171,7 @@ class MachineConfigPatchTool(TalosTool):
     name = "talos_machineconfig_patch"
     description = "Patch the machine configuration directly"
     args_schema = MachineConfigPatchSchema
+    is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -205,4 +213,3 @@ class GenConfigTool(TalosTool):
 
         # This runs locally, does not require nodes
         return await self.execute_talosctl(cmd)
-

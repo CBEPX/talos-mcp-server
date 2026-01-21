@@ -73,7 +73,7 @@ dev = [
 ]
 
 [project.scripts]
-talos-mcp-server = "talos_mcp.server:cli"
+talos-mcp-server = "talos_mcp.cli:cli"
 
 [build-system]
 requires = ["hatchling"]
@@ -166,6 +166,10 @@ ignore = [
     "T201",   # print statements
 ]
 "src/talos_mcp/__init__.py" = ["D104"]
+"src/talos_mcp/cli.py" = [
+    "ARG001",  # version arg used in callback
+    "PLC0415", # Import inside function needed for circular import avoidance
+]
 
 [tool.ruff.lint.isort]
 force-single-line = false
@@ -259,7 +263,7 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "@abstractmethod",
 ]
-fail_under = 60
+fail_under = 65
 show_missing = true
 
 # =============================================================================

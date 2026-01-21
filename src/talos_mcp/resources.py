@@ -63,8 +63,8 @@ class TalosResources:
             raise ValueError(f"Unsupported scheme: {scheme}")
 
         if not host:
-             # handle case where host might be empty or part of path depending on parsing
-             pass
+            # handle case where host might be empty or part of path depending on parsing
+            pass
 
         # Normalize path
         resource_type = path.strip("/") if path else ""
@@ -74,7 +74,7 @@ class TalosResources:
         elif resource_type == "version":
             return await self._get_version(host)
         elif resource_type == "config":
-             # Config is cluster-wide usually, but we keep URI structure consistent
+            # Config is cluster-wide usually, but we keep URI structure consistent
             return await self._get_config_info()
         else:
             raise ValueError(f"Unknown resource type: {resource_type}")

@@ -14,7 +14,6 @@ class TalosTool(ABC):
     """Base class for all Talos MCP tools."""
 
     name: ClassVar[str]
-    name: ClassVar[str]
     description: ClassVar[str]
     args_schema: ClassVar[type[BaseModel]]  # Renamed from input_schema to be explicit
     is_mutation: ClassVar[bool] = False  # Set to True for tools that modify state
@@ -75,10 +74,10 @@ class TalosTool(ABC):
 
     def ensure_nodes(self, nodes: str | None) -> str:
         """Helper to ensure nodes are set, defaulting to all cluster nodes if None.
-        
+
         Args:
             nodes: The provided nodes argument (comma-separated list or None).
-            
+
         Returns:
             Comma-separated list of nodes.
         """

@@ -11,7 +11,10 @@ from talos_mcp.tools.base import TalosTool
 class ListFilesSchema(BaseModel):
     """Schema for list files arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
+    nodes: str | None = Field(
+        default=None,
+        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+    )
     path: str = Field(default="/", description="Directory path")
 
 
@@ -33,7 +36,10 @@ class ListFilesTool(TalosTool):
 class ReadFileSchema(BaseModel):
     """Schema for read file arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
+    nodes: str | None = Field(
+        default=None,
+        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+    )
     path: str = Field(description="File path to read")
 
 
@@ -58,7 +64,10 @@ class CopySchema(BaseModel):
     # Copying to/from multiple nodes is complex. `talosctl cp` might not support it for download.
     # Upload to multiple nodes works.
     # Let's support it, but behavior depends on talosctl.
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
+    nodes: str | None = Field(
+        default=None,
+        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+    )
     src: str = Field(description="Source path")
     dst: str = Field(description="Destination path")
     direction: str = Field(
@@ -73,6 +82,7 @@ class CopyTool(TalosTool):
     name = "talos_cp"
     description = "Copy files to/from node"
     args_schema = CopySchema
+    is_mutation = True  # Can upload files to node
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -95,7 +105,10 @@ class CopyTool(TalosTool):
 class DiskUsageSchema(BaseModel):
     """Schema for disk usage arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
+    nodes: str | None = Field(
+        default=None,
+        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+    )
     path: str = Field(default="/", description="Path to check")
 
 
@@ -117,7 +130,10 @@ class DiskUsageTool(TalosTool):
 class MountsSchema(BaseModel):
     """Schema for mounts arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
+    nodes: str | None = Field(
+        default=None,
+        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+    )
 
 
 class MountsTool(TalosTool):

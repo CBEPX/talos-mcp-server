@@ -27,6 +27,7 @@ async def wait_for_cluster(timeout: int = 300):
 
         await asyncio.sleep(2)
 
+
 if __name__ == "__main__":
     try:
         asyncio.run(wait_for_cluster())

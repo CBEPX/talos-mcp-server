@@ -1,20 +1,22 @@
-
 import asyncio
 import logging
 import sys
 from pathlib import Path
 
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from talos_mcp.core.client import TalosClient
-from talos_mcp.tools.system import GetVersionTool, GetHealthTool
 from talos_mcp.tools.cgroups import CgroupsTool
+from talos_mcp.tools.system import GetHealthTool, GetVersionTool
 from talos_mcp.tools.volumes import VolumesTool
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("manual_verify")
+
 
 async def main():
     print("🚀 Starting Manual Verification on Docker Cluster")
@@ -23,7 +25,7 @@ async def main():
     # Initialize client with local config
     config_file = str(Path("talosconfig").absolute())
     print(f"📂 Using config: {config_file}")
-    
+
     try:
         client = TalosClient(config_path=config_file)
     except Exception as e:
@@ -33,7 +35,7 @@ async def main():
     # Get Nodes
     print("\n1️⃣  Discovering Nodes...")
     try:
-        # We need to manually get nodes because the client might not auto-detect 
+        # We need to manually get nodes because the client might not auto-detect
         # correctly if specific endpoints aren't mapped to nodes in a way it expects
         # or just to be safe.
         # Actually client.get_nodes() parses the config.
@@ -43,14 +45,14 @@ async def main():
             # Fallback for docker provisioner often just uses the endpoint IP or 10.5.0.2
             # Let's try to grab endpoints from context
             info = client.get_context_info()
-            if 'endpoints' in info:
+            if "endpoints" in info:
                 # Docker provisioner usually exposes ports to localhost, but the node IP inside
-                # the network is what talosctl expects if accessing directly? 
-                # Actually --nodes 127.0.0.1 might work if port forwarding is set up, 
+                # the network is what talosctl expects if accessing directly?
+                # Actually --nodes 127.0.0.1 might work if port forwarding is set up,
                 # but usually we need the container IP.
                 # Let's try the first node found or default to 10.5.0.2 (common for docker provider)
                 # In the 'make cluster-up' output we saw: 10.5.0.2
-                print(f"   Fallback: Using 10.5.0.2 as node")
+                print("   Fallback: Using 10.5.0.2 as node")
                 nodes = ["10.5.0.2"]
             else:
                 print("❌ No nodes found in config and no endpoints.")
@@ -88,6 +90,7 @@ async def main():
 
     print("\n" + "=" * 50)
     print("✅ Verification Complete")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

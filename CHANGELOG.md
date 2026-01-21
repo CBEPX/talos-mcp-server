@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Tool Auto-Discovery**:
+  - Implemented automatic tool discovery system in `registry.py`.
+  - Tools are now auto-discovered from `tools/` directory using reflection.
+  - No need to manually import and register new tools.
+  - Added 9 comprehensive tests in `test_registry.py`.
+- **Structured Error Codes**:
+  - Added `ErrorCode` enum with 20+ categorized error codes (1xx-5xx).
+  - Enhanced `TalosError`, `TalosConnectionError`, and `TalosCommandError` with structured codes.
+  - Automatic error code inference from return codes and stderr content.
+  - Added `to_dict()` methods for structured logging.
+  - Added 19 comprehensive tests in `test_exceptions.py`.
+- **New Test Suites**:
+  - `test_readonly.py`: 5 tests for readonly enforcement.
+  - `test_client_caching.py`: 4 tests for caching and IPv6 parsing.
+  - `test_registry.py`: 9 tests for tool discovery.
+  - `test_exceptions.py`: 19 tests for error handling.
+  - Total: 37 new test cases.
+
+### Changed
+- **Architecture Refactoring**:
+  - Extracted CLI logic into `cli.py` module (180 lines).
+  - Extracted MCP handlers into `handlers.py` module (140 lines).
+  - Created tool registry in `registry.py` module (120 lines).
+  - Reduced `server.py` from 432 to ~90 lines (79% reduction).
+  - Better separation of concerns following Single Responsibility Principle.
+- **Tool Standardization**:
+  - Converted `CgroupsTool` and `VolumesTool` to use Pydantic schemas.
+  - All tools now follow consistent pattern with `args_schema` class attribute.
+
+### Fixed
+- **Critical Bugs**:
+  - Added `is_mutation = True` to all 13 mutating tool classes.
+  - Removed duplicate `WRITE_TOOLS` definitions in `server.py`.
+  - Fixed duplicate `name: ClassVar[str]` declaration in `base.py`.
+  - Synced version numbers between `pyproject.toml` and code (0.3.8).
+- **High Priority**:
+  - Consolidated readonly enforcement to single mechanism using `is_mutation` flag.
+  - Removed redundant readonly checks from `TalosClient.execute_talosctl()`.
+  - Fixed IPv6 address parsing bug in `get_nodes()` to handle `[IPv6]:port` format.
+  - Fixed IPv4:port parsing to use colon counting for reliability.
+- **Security**:
+  - Moved audit log from temp directory to current directory.
+  - Added talosconfig path validation with security checks.
+  - Added file permission warnings for world-readable configs.
+  - Path validation in `TalosClient._load_config()`.
+- **Performance**:
+  - Implemented config file caching based on mtime.
+  - Added LRU cache for `get_nodes()` method.
+  - Cache automatically invalidates when config changes.
+- **Documentation**:
+  - Fixed typo "Deprogam" → "Defragment" in README.
+  - Updated CONTRIBUTING.md with correct project structure.
+  - Created comprehensive IMPLEMENTATION_SUMMARY.md.
+
 ## [0.4.0] - 2026-01-21
 
 ### Added
@@ -12,9 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `talos_cgroups`: Manage cgroups (Talos 1.9+).
   - `talos_volumes`: Manage user volumes (Talos 1.12+).
   - `talos_support`: Generate support bundles.
-- **Architectural Safety**:
-  - Implemented robust `is_mutation` flag on `TalosTool` class for decentralized Read-Only enforcement.
-  - Improved `server.py` to use bottom-up safety checks.
 
 ### Changed
 - **Refactoring**:

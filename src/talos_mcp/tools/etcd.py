@@ -56,9 +56,7 @@ class EtcdAlarmSchema(BaseModel):
     """Schema for etcd alarm arguments."""
 
     nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
-    action: Literal["list", "disarm"] = Field(
-        default="list", description="Action: list, disarm"
-    )
+    action: Literal["list", "disarm"] = Field(default="list", description="Action: list, disarm")
 
 
 class EtcdAlarmTool(TalosTool):
@@ -67,6 +65,7 @@ class EtcdAlarmTool(TalosTool):
     name = "talos_etcd_alarm"
     description = "List or disarm etcd alarms"
     args_schema = EtcdAlarmSchema
+    is_mutation = True  # Can disarm alarms
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -87,6 +86,7 @@ class EtcdDefragTool(TalosTool):
     name = "talos_etcd_defrag"
     description = "Defragment etcd member"
     args_schema = EtcdDefragSchema
+    is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""

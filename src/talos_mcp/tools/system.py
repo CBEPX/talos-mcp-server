@@ -11,7 +11,10 @@ from talos_mcp.tools.base import TalosTool
 class NodesSchema(BaseModel):
     """Schema for node arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.")
+    nodes: str | None = Field(
+        default=None,
+        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+    )
 
 
 class GetVersionTool(TalosTool):
@@ -159,4 +162,3 @@ class DevicesTool(TalosTool):
         args = NodesSchema(**arguments)
         nodes = self.ensure_nodes(args.nodes)
         return await self.execute_talosctl(["get", "devices", "-n", nodes])
-

@@ -237,7 +237,7 @@ The server uses `Typer` for CLI arguments and `Pydantic Settings` for environmen
 - **talos_etcd_members**: List etcd members
 - **talos_etcd_snapshot**: Take etcd snapshot
 - **talos_etcd_alarm**: Manage etcd alarms
-- **talos_etcd_defrag**: Deprogam etcd storage
+- **talos_etcd_defrag**: Defragment etcd storage
 
 ### New Features (Talos 1.12+)
 
@@ -325,10 +325,13 @@ The server uses `loguru` for structured logging.
 └────────┬────────┘
          │ MCP Protocol
          ↓
-┌─────────────────┐
-│  MCP Server     │
-│  (Python)       │
-└────────┬────────┘
+┌─────────────────────────────────────┐
+│  MCP Server (Python)                │
+│  ├─ cli.py (CLI & Lifecycle)        │
+│  ├─ handlers.py (Protocol Handlers) │
+│  ├─ registry.py (Auto-Discovery)    │
+│  └─ server.py (Initialization)      │
+└────────┬────────────────────────────┘
          │ subprocess
          ↓
 ┌─────────────────┐
@@ -341,6 +344,15 @@ The server uses `loguru` for structured logging.
 │   (apid API)    │
 └─────────────────┘
 ```
+
+### Key Components
+
+- **cli.py**: Command-line interface, logging, and server lifecycle
+- **server.py**: MCP server initialization and handler registration
+- **handlers.py**: MCP protocol handlers (Resources, Prompts, Tools)
+- **registry.py**: Auto-discovery and registration of tools
+- **core/**: Client, settings, and exception handling
+- **tools/**: Modular tool implementations (auto-discovered)
 
 ## Security Considerations
 

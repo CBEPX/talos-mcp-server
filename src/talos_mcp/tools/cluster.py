@@ -21,6 +21,7 @@ class RebootTool(TalosTool):
     name = "talos_reboot"
     description = "Reboot node(s)"
     args_schema = RebootSchema
+    is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -44,6 +45,7 @@ class ShutdownTool(TalosTool):
     name = "talos_shutdown"
     description = "Shutdown node(s)"
     args_schema = ShutdownSchema
+    is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -59,9 +61,7 @@ class ResetSchema(BaseModel):
 
     nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
     reboot: bool = Field(default=False, description="Reboot after reset")
-    system_labels_to_wipe: str = Field(
-        default="", description="System labels to wipe"
-    )
+    system_labels_to_wipe: str = Field(default="", description="System labels to wipe")
     graceful: bool = Field(default=True, description="Graceful reset")
 
 
@@ -71,6 +71,7 @@ class ResetTool(TalosTool):
     name = "talos_reset"
     description = "Reset node(s) to maintenance mode or factory"
     args_schema = ResetSchema
+    is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -99,6 +100,7 @@ class UpgradeTool(TalosTool):
     name = "talos_upgrade"
     description = "Upgrade Talos on node(s)"
     args_schema = UpgradeSchema
+    is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -114,8 +116,7 @@ class ImageSchema(BaseModel):
 
     nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
     cmd: str = Field(
-        default="list",
-        description="Command: list, pull, default, cache-create, cache-serve"
+        default="list", description="Command: list, pull, default, cache-create, cache-serve"
     )
     image: str = Field(default="", description="Image name (for pull/cache-create)")
     layout: str = Field(default="", description="Layout for cache commands (oci, flat)")
@@ -128,6 +129,7 @@ class ImageTool(TalosTool):
     name = "talos_image"
     description = "Manage container images on Talos (new in 1.12)"
     args_schema = ImageSchema
+    is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -173,6 +175,7 @@ class BootstrapTool(TalosTool):
     name = "talos_bootstrap"
     description = "Bootstrap the etcd cluster on the specified node"
     args_schema = BootstrapSchema
+    is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
@@ -188,7 +191,9 @@ class BootstrapTool(TalosTool):
 class ClusterShowSchema(BaseModel):
     """Schema for cluster show arguments."""
 
-    nodes: str | None = Field(default=None, description="Comma-separated list of node IPs/hostnames (optional filter)")
+    nodes: str | None = Field(
+        default=None, description="Comma-separated list of node IPs/hostnames (optional filter)"
+    )
 
 
 class ClusterShowTool(TalosTool):

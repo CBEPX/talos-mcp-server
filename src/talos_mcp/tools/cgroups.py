@@ -1,59 +1,49 @@
 """Cgroups tool for Talos Linux."""
 
-from typing import Any, Dict, List
+from typing import Any, Literal
 
-from mcp.types import Tool, TextContent
-from pydantic import Field
+from mcp.types import TextContent
+from pydantic import BaseModel, Field
 
 from talos_mcp.tools.base import TalosTool
+
+
+class CgroupsSchema(BaseModel):
+    """Schema for cgroups arguments."""
+
+    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    action: Literal["list", "get", "kill"] = Field(
+        default="list", description="Action: list, get, or kill"
+    )
+    cgroup: str | None = Field(default=None, description="Cgroup path (for get/kill actions)")
 
 
 class CgroupsTool(TalosTool):
     """Tool for managing cgroups in Talos Linux (Talos 1.9+)."""
 
     name = "talos_cgroups"
-    description = "Manage cgroups in Talos Linux nodes. Allows listing cgroups, getting stats, and killing cgroups."
+    description = (
+        "Manage cgroups in Talos Linux nodes. "
+        "Allows listing cgroups, getting stats, and killing cgroups."
+    )
+    args_schema = CgroupsSchema
     is_mutation = True  # Supports 'kill' action
 
-    def input_schema(self) -> Dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "nodes": {
-                    "type": "string",
-                    "description": "Comma-separated list of node IPs or hostnames to target",
-                },
-                "action": {
-                    "type": "string",
-                    "description": "Action to perform: list, get, or kill",
-                    "enum": ["list", "get", "kill"],
-                    "default": "list",
-                },
-                "cgroup": {
-                    "type": "string",
-                    "description": "Cgroup path (required for get and kill actions)",
-                },
-            },
-            "required": ["nodes"],
-        }
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        args = CgroupsSchema(**arguments)
+        nodes = self.ensure_nodes(args.nodes)
+        action = args.action
 
-    async def run(self, arguments: Dict[str, Any]) -> List[Any]:
-        nodes = self.ensure_nodes(arguments.get("nodes"))
-        action = arguments.get("action", "list")
-        cgroup = arguments.get("cgroup")
+        if action == "kill":
+            return [
+                TextContent(
+                    type="text",
+                    text="Error: 'kill' action not supported by talosctl CLI.",
+                )
+            ]
 
-        if action in ["list", "get"]:
-            # talosctl cgroups (no subcommand)
-            cmd = ["cgroups"]
-            # We could add --preset if exposed in schema later
-            if arguments.get("cgroup"):
-                # Use it as a filter if possible, but CLI doesn't support it directly as arg
-                # warn or ignore? For now ignore or log
-                pass
-        elif action == "kill":
-            return [TextContent(type="text", text="Error: 'kill' action is not supported by talosctl CLI for cgroups.")]
-        else:
-             cmd = ["cgroups"]
+        # talosctl cgroups (no subcommand for list/get)
+        cmd = ["cgroups"]
 
         cmd.extend(["--nodes", nodes])
 
@@ -62,11 +52,11 @@ class CgroupsTool(TalosTool):
             return await self.execute_talosctl(cmd)
         except Exception as e:
             if "unknown command" in str(e).lower():
-                from mcp.types import TextContent
                 return [
                     TextContent(
                         type="text",
-                        text=f"Error: 'cgroups' command not found. This feature requires Talos 1.9+ and a compatible talosctl version (installed: {self.client.get_talosctl_version()})."
+                        text="Error: 'cgroups' command not found. "
+                        "This feature requires Talos 1.9+ and compatible talosctl.",
                     )
                 ]
             raise
