@@ -14,7 +14,7 @@ from mcp.server.stdio import stdio_server
 from talos_mcp.core.settings import settings
 
 
-__version__ = "0.3.8"
+__version__ = "0.3.9"
 
 
 def version_callback(value: bool) -> None:
