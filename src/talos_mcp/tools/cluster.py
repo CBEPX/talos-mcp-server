@@ -5,7 +5,7 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import BaseModel, Field
 
-from talos_mcp.tools.base import TalosTool
+from talos_mcp.tools.base import MutatingTool, TalosTool
 
 
 class RebootSchema(BaseModel):
@@ -15,15 +15,41 @@ class RebootSchema(BaseModel):
     mode: str = Field(default="default", description="Reboot mode: default, powercycle, force")
 
 
-class RebootTool(TalosTool):
-    """Reboot nodes."""
+class RebootTool(MutatingTool):
+    """Reboot Talos nodes.
+
+    Gracefully reboots the specified nodes. Use with caution as this
+    will temporarily disrupt workloads running on the node.
+
+    Reboot modes:
+        - default: Standard reboot
+        - powercycle: Power cycle the machine (hard reboot)
+        - force: Force reboot even if node is not ready
+
+    Examples:
+        - Reboot single node: {"nodes": "192.168.1.10"}
+        - Reboot multiple nodes: {"nodes": "192.168.1.10,192.168.1.11"}
+        - Force reboot: {"nodes": "192.168.1.10", "mode": "force"}
+
+    Common use cases:
+        - Apply kernel updates
+        - Recover from node hang
+        - Rolling restart during maintenance window
+
+    Warning: Ensure proper pod disruption budgets and replica counts
+    to maintain service availability during reboots.
+    """
 
     name = "talos_reboot"
-    description = "Reboot node(s)"
+    description = (
+        "Reboot Talos node(s). Disrupts workloads; use with caution. "
+        "Modes: default, powercycle, force. "
+        "Example: {\"nodes\": \"192.168.1.10\"} or {\"nodes\": \"10.0.0.1,10.0.0.2\"}. "
+        "Warning: Ensure pod disruption budgets are set to maintain availability."
+    )
     args_schema = RebootSchema
-    is_mutation = True
 
-    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+    async def _run_impl(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = RebootSchema(**arguments)
         cmd = ["reboot", "-n", args.nodes]
@@ -39,15 +65,36 @@ class ShutdownSchema(BaseModel):
     force: bool = Field(default=False, description="Force shutdown")
 
 
-class ShutdownTool(TalosTool):
-    """Shutdown nodes."""
+class ShutdownTool(MutatingTool):
+    """Shutdown Talos nodes.
+
+    Gracefully shuts down the specified nodes. Use with extreme caution
+    as this will completely stop the node and require manual power-on
+    or IPMI to restart.
+
+    Examples:
+        - Shutdown single node: {"nodes": "192.168.1.10"}
+        - Force shutdown: {"nodes": "192.168.1.10", "force": true}
+
+    Common use cases:
+        - Planned maintenance with physical access
+        - Power management in data center
+        - Emergency shutdown
+
+    Warning: Node will NOT automatically restart. Ensure you have
+    physical access or IPMI to power the node back on.
+    """
 
     name = "talos_shutdown"
-    description = "Shutdown node(s)"
+    description = (
+        "Shutdown Talos node(s). EXTREME CAUTION: node will not auto-restart. "
+        "Requires physical access or IPMI to power back on. "
+        "Example: {\"nodes\": \"192.168.1.10\"}. "
+        "Use force=true for unresponsive nodes."
+    )
     args_schema = ShutdownSchema
-    is_mutation = True
 
-    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+    async def _run_impl(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = ShutdownSchema(**arguments)
         cmd = ["shutdown", "-n", args.nodes]
@@ -65,15 +112,14 @@ class ResetSchema(BaseModel):
     graceful: bool = Field(default=True, description="Graceful reset")
 
 
-class ResetTool(TalosTool):
+class ResetTool(MutatingTool):
     """Reset nodes."""
 
     name = "talos_reset"
     description = "Reset node(s) to maintenance mode or factory"
     args_schema = ResetSchema
-    is_mutation = True
 
-    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+    async def _run_impl(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = ResetSchema(**arguments)
         cmd = ["reset", "-n", args.nodes]
@@ -94,15 +140,50 @@ class UpgradeSchema(BaseModel):
     preserve: bool = Field(default=True, description="Preserve data")
 
 
-class UpgradeTool(TalosTool):
-    """Upgrade nodes."""
+class UpgradeTool(MutatingTool):
+    """Upgrade Talos OS on nodes.
+
+    Upgrades Talos to a new version using the specified installer image.
+    This is a disruptive operation that will reboot the node.
+
+    Image format: ghcr.io/siderolabs/installer:v<VERSION>
+    Example images:
+        - ghcr.io/siderolabs/installer:v1.12.0
+        - ghcr.io/siderolabs/installer:v1.11.3
+
+    Examples:
+        - Upgrade single node: {
+            "nodes": "192.168.1.10",
+            "image": "ghcr.io/siderolabs/installer:v1.12.0"
+          }
+        - Upgrade without preserving data: {
+            "nodes": "192.168.1.10",
+            "image": "ghcr.io/siderolabs/installer:v1.12.0",
+            "preserve": false
+          }
+
+    Common use cases:
+        - Security patch application
+        - Feature updates
+        - Bug fix deployment
+
+    Warning:
+        - Node will reboot during upgrade
+        - Ensure workloads can tolerate disruption
+        - Test upgrade in staging environment first
+        - Preserve=true (default) keeps ephemeral data
+    """
 
     name = "talos_upgrade"
-    description = "Upgrade Talos on node(s)"
+    description = (
+        "Upgrade Talos OS on node(s). DISRUPTIVE: node will reboot. "
+        "Image format: ghcr.io/siderolabs/installer:v<VERSION>. "
+        "Example: {\"nodes\": \"192.168.1.10\", \"image\": \"ghcr.io/siderolabs/installer:v1.12.0\"}. "
+        "Warning: Test in staging first. Use preserve=true (default) to keep data."
+    )
     args_schema = UpgradeSchema
-    is_mutation = True
 
-    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+    async def _run_impl(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = UpgradeSchema(**arguments)
         cmd = ["upgrade", "-n", args.nodes, "--image", args.image]
@@ -169,15 +250,14 @@ class BootstrapSchema(BaseModel):
     nodes: str = Field(description="Comma-separated list of node IPs/hostnames (usually just one)")
 
 
-class BootstrapTool(TalosTool):
+class BootstrapTool(MutatingTool):
     """Bootstrap cluster."""
 
     name = "talos_bootstrap"
     description = "Bootstrap the etcd cluster on the specified node"
     args_schema = BootstrapSchema
-    is_mutation = True
 
-    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+    async def _run_impl(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = BootstrapSchema(**arguments)
         nodes = self.ensure_nodes(args.nodes)

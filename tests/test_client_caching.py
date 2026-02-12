@@ -3,6 +3,7 @@
 import tempfile
 from pathlib import Path
 
+import pytest
 import yaml
 
 from talos_mcp.core.client import TalosClient
@@ -141,5 +142,80 @@ class TestClientCaching:
 
             # Should not contain ports
             assert "192.168.1.1:6443" not in nodes
+        finally:
+            Path(config_path).unlink()
+
+
+class TestHealthCheck:
+    """Test health_check method."""
+
+    @pytest.mark.asyncio
+    async def test_health_check_returns_unhealthy_when_no_config(self):
+        """Test health_check returns unhealthy when no config loaded."""
+        client = TalosClient(config_path="/nonexistent/path/config")
+
+        result = await client.health_check()
+
+        assert result["healthy"] is False
+        assert "No Talos configuration" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_health_check_uses_mocked_execute(self, mocker):
+        """Test health_check uses execute_talosctl."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            config = {
+                "context": "test",
+                "contexts": {"test": {"endpoints": ["192.168.1.1"]}},
+            }
+            yaml.dump(config, f)
+            config_path = f.name
+
+        try:
+            client = TalosClient(config_path=config_path)
+
+            # Mock execute_talosctl to return success
+            mock_execute = mocker.patch.object(
+                client,
+                "execute_talosctl",
+                return_value={"stdout": "Talos v1.12.0\nClient:...", "stderr": ""},
+            )
+
+            result = await client.health_check()
+
+            assert result["healthy"] is True
+            assert "Talos v1.12.0" in result.get("version", "")
+            mock_execute.assert_called_once_with(["version", "--timeout", "5s"])
+        finally:
+            Path(config_path).unlink()
+
+    @pytest.mark.asyncio
+    async def test_health_check_returns_error_on_failure(self, mocker):
+        """Test health_check returns error details on failure."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            config = {
+                "context": "test",
+                "contexts": {"test": {"endpoints": ["192.168.1.1"]}},
+            }
+            yaml.dump(config, f)
+            config_path = f.name
+
+        try:
+            from talos_mcp.core.exceptions import ErrorCode, TalosCommandError
+
+            client = TalosClient(config_path=config_path)
+
+            # Mock execute_talosctl to raise error
+            error = TalosCommandError(
+                ["talosctl", "version"],
+                1,
+                "connection refused",
+                ErrorCode.CONNECTION_FAILED,
+            )
+            mocker.patch.object(client, "execute_talosctl", side_effect=error)
+
+            result = await client.health_check()
+
+            assert result["healthy"] is False
+            assert "CONNECTION_FAILED" in result.get("code", "")
         finally:
             Path(config_path).unlink()

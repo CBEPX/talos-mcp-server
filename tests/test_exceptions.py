@@ -166,6 +166,83 @@ class TestTalosCommandError:
         assert "Command failed with code 1" in str(error)
         assert "Error occurred" in str(error)
 
+    def test_command_error_get_user_message_known_code(self):
+        """Test get_user_message returns user-friendly message for known codes."""
+        cmd = ["talosctl", "version"]
+        error = TalosCommandError(cmd, 127, "command not found")
+
+        message = error.get_user_message()
+
+        assert "talosctl not found" in message
+        assert "https://talos.dev/install" in message
+        assert "Technical details:" in message
+        assert "command not found" in message
+
+    def test_command_error_get_user_message_connection_refused(self):
+        """Test get_user_message for connection refused error."""
+        cmd = ["talosctl", "version", "-n", "10.0.0.1"]
+        error = TalosCommandError(cmd, 1, "connection refused: dial tcp 10.0.0.1:50000")
+
+        message = error.get_user_message()
+
+        assert error.code == ErrorCode.CONNECTION_FAILED
+        assert "Cannot connect to Talos node" in message
+        assert "check if the node is online" in message.lower()
+
+    def test_command_error_get_user_message_timeout(self):
+        """Test get_user_message for timeout error."""
+        cmd = ["talosctl", "health"]
+        error = TalosCommandError(cmd, 1, "context deadline exceeded")
+
+        message = error.get_user_message()
+
+        assert error.code == ErrorCode.TIMEOUT
+        assert "timed out" in message.lower()
+
+    def test_command_error_get_user_message_auth_failed(self):
+        """Test get_user_message for authentication error."""
+        cmd = ["talosctl", "version"]
+        error = TalosCommandError(cmd, 1, "authentication failed: certificate signed by unknown authority")
+
+        message = error.get_user_message()
+
+        assert error.code == ErrorCode.AUTHENTICATION_FAILED
+        assert "Authentication failed" in message
+
+    def test_command_error_get_user_message_unknown_code(self):
+        """Test get_user_message for unknown error code."""
+        cmd = ["talosctl", "version"]
+        error = TalosCommandError(cmd, 1, "some unexpected error")
+
+        message = error.get_user_message()
+
+        # Should return generic message with technical details
+        assert "Operation failed:" in message
+        assert "some unexpected error" in message
+
+    def test_command_error_infer_connection_reset(self):
+        """Test error code inference for connection reset."""
+        cmd = ["talosctl", "version"]
+        error = TalosCommandError(cmd, 1, "connection reset by peer")
+
+        assert error.code == ErrorCode.CONNECTION_FAILED
+
+    def test_command_error_infer_no_route(self):
+        """Test error code inference for no route to host."""
+        cmd = ["talosctl", "version"]
+        error = TalosCommandError(cmd, 1, "No route to host")
+
+        assert error.code == ErrorCode.NODE_UNREACHABLE
+
+    def test_command_error_to_dict_includes_user_message(self):
+        """Test that to_dict includes user_message."""
+        cmd = ["talosctl", "version"]
+        error = TalosCommandError(cmd, 127, "command not found")
+        error_dict = error.to_dict()
+
+        assert "user_message" in error_dict
+        assert "talosctl not found" in error_dict["user_message"]
+
 
 class TestErrorHierarchy:
     """Test exception inheritance hierarchy."""

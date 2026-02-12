@@ -117,6 +117,24 @@ class MCPHandlers:
         if not tool:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
+        # Check if Talos config is available
+        if not tool.client.config:
+            return [
+                TextContent(
+                    type="text",
+                    text=(
+                        "Error: No Talos configuration found.\n\n"
+                        "To use Talos MCP Server, you need:\n"
+                        "1. A valid talosconfig file (usually at ~/.talos/config)\n"
+                        "2. Set TALOSCONFIG environment variable to point to your config\n\n"
+                        "To set up a new cluster:\n"
+                        "  talosctl gen config <cluster-name> https://<control-plane-ip>:6443\n\n"
+                        "For existing cluster:\n"
+                        "  export TALOSCONFIG=/path/to/your/talosconfig"
+                    ),
+                )
+            ]
+
         # Enforce read-only mode using is_mutation flag
         if settings.readonly and getattr(tool, "is_mutation", False):
             logger.warning(f"Blocked write operation in readonly mode: {name}")

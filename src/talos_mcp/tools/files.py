@@ -19,10 +19,29 @@ class ListFilesSchema(BaseModel):
 
 
 class ListFilesTool(TalosTool):
-    """List files on a node."""
+    """List files and directories on Talos nodes.
+
+    Browse the read-only root filesystem of Talos nodes.
+    Note: Talos has an immutable filesystem; most paths are read-only.
+
+    Examples:
+        - List root directory: {}
+        - List specific path: {"path": "/etc"}
+        - List on specific node: {"path": "/", "nodes": "192.168.1.10"}
+
+    Common paths to explore:
+        - /etc: Configuration files
+        - /usr/local/etc: Local configuration
+        - /var/log: Log files (if persisted)
+    """
 
     name = "talos_ls"
-    description = "List files and directories"
+    description = (
+        "List files and directories on Talos nodes. "
+        "Browse the immutable root filesystem. "
+        "Example: {\"path\": \"/etc\"} to list config files. "
+        "Note: Most paths are read-only due to Talos immutability."
+    )
     args_schema = ListFilesSchema
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
@@ -113,10 +132,29 @@ class DiskUsageSchema(BaseModel):
 
 
 class DiskUsageTool(TalosTool):
-    """Disk Usage."""
+    """Check disk usage on Talos nodes.
+
+    Shows disk space usage for the specified path.
+    Useful for monitoring ephemeral storage and persistent volumes.
+
+    Examples:
+        - Check root usage: {}
+        - Check specific path: {"path": "/var"}
+        - Check on specific node: {"nodes": "192.168.1.10"}
+
+    Common use cases:
+        - Monitor ephemeral storage consumption
+        - Check persistent volume usage
+        - Troubleshoot disk space issues
+    """
 
     name = "talos_du"
-    description = "Check disk usage"
+    description = (
+        "Check disk usage on Talos nodes. "
+        "Monitor ephemeral storage and persistent volume space. "
+        "Example: {\"path\": \"/var\"} to check usage. "
+        "Use for storage monitoring and troubleshooting."
+    )
     args_schema = DiskUsageSchema
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:

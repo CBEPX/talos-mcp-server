@@ -151,6 +151,45 @@ class TalosClient:
         # Use config mtime as cache key to invalidate when config changes
         return self._get_nodes_cached(self._config_mtime)
 
+    async def health_check(self) -> dict[str, Any]:
+        """Perform a health check by executing a lightweight talosctl command.
+
+        Returns:
+            Dictionary with health status information:
+            - healthy: bool indicating if check passed
+            - error: Error message if unhealthy (optional)
+            - version: Brief version info if healthy (optional)
+        """
+        if not self.config:
+            return {
+                "healthy": False,
+                "error": "No Talos configuration loaded",
+            }
+
+        try:
+            # Use version command with short timeout as health check
+            result = await self.execute_talosctl(["version", "--timeout", "5s"])
+            stdout = result.get("stdout", "")
+
+            # Extract version from output (first line typically contains it)
+            version_line = stdout.split("\n")[0] if stdout else "Talos API reachable"
+
+            return {
+                "healthy": True,
+                "version": version_line[:100],  # Truncate for brevity
+            }
+        except TalosCommandError as e:
+            return {
+                "healthy": False,
+                "error": e.get_user_message(),
+                "code": e.code.name,
+            }
+        except Exception as e:
+            return {
+                "healthy": False,
+                "error": f"Unexpected error during health check: {e!s}",
+            }
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),

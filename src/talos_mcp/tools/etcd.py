@@ -15,10 +15,29 @@ class EtcdMembersSchema(BaseModel):
 
 
 class EtcdMembersTool(TalosTool):
-    """Etcd members."""
+    """List etcd cluster members.
+
+    Shows all etcd members with their ID, status, and peer URLs.
+    Useful for verifying cluster membership and leader status.
+
+    Examples:
+        - List members from control plane: {"nodes": "192.168.1.10"}
+
+    Common use cases:
+        - Verify etcd cluster membership
+        - Check which node is the leader
+        - Troubleshoot etcd connectivity issues
+
+    Required permissions: etcd:read (reader role)
+    """
 
     name = "talos_etcd_members"
-    description = "List etcd members"
+    description = (
+        "List etcd cluster members with ID, status, and peer URLs. "
+        "Use to verify cluster membership and identify the leader. "
+        "Example: {\"nodes\": \"192.168.1.10\"} (use control plane node). "
+        "Required: etcd:read permission."
+    )
     args_schema = EtcdMembersSchema
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
@@ -39,10 +58,32 @@ class EtcdSnapshotSchema(BaseModel):
 
 
 class EtcdSnapshotTool(TalosTool):
-    """Etcd snapshot."""
+    """Create etcd backup snapshot.
+
+    Creates a point-in-time snapshot of the etcd database for backup
+    and disaster recovery purposes. The snapshot is saved to the specified
+    path on the local machine (where MCP server runs).
+
+    Examples:
+        - Create snapshot: {"nodes": "192.168.1.10", "path": "/backup/etcd-$(date +%Y%m%d).db"}
+        - Use default path: {"nodes": "192.168.1.10"}
+
+    Common use cases:
+        - Scheduled backups before upgrades
+        - Pre-migration backups
+        - Disaster recovery preparation
+
+    Required permissions: etcd:backup (admin role)
+    Note: Snapshot is taken from the specified node; ensure it's a control plane node.
+    """
 
     name = "talos_etcd_snapshot"
-    description = "Take an etcd snapshot"
+    description = (
+        "Create etcd backup snapshot for disaster recovery. "
+        "Saves point-in-time backup to specified local path. "
+        "Example: {\"nodes\": \"192.168.1.10\", \"path\": \"/backup/etcd.db\"}. "
+        "Required: etcd:backup permission. Use control plane node."
+    )
     args_schema = EtcdSnapshotSchema
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:

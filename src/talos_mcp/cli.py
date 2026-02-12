@@ -157,20 +157,39 @@ def main(
         help="Enable read-only mode (prevents mutating commands)",
         envvar="TALOS_MCP_READONLY",
     ),
+    skip_health_check: bool = typer.Option(
+        False,
+        "--skip-health-check",
+        help="Skip initial health check",
+        envvar="TALOS_MCP_SKIP_HEALTH_CHECK",
+    ),
 ) -> None:
     """Run the Talos MCP Server."""
-    # Import here to avoid circular imports
-    from talos_mcp.server import app_mcp
-
     # Update global settings from CLI args
     settings.log_level = log_level
     if audit_log:
         settings.audit_log_path = audit_log
     settings.readonly = readonly
 
+    # Configure logging BEFORE importing server to capture all logs
     configure_logging()
+
+    # Import here to avoid circular imports
+    from talos_mcp.server import app_mcp, talos_client
     uvloop.install()
     logger.info(f"Starting Talos MCP Server with log level {settings.log_level}")
+
+    # Perform health check if config exists and not skipped
+    if not skip_health_check and talos_client.config:
+        import asyncio
+
+        health = asyncio.run(talos_client.health_check())
+        if health["healthy"]:
+            logger.info(f"Talos cluster health check passed: {health.get('version', '')}")
+        else:
+            error_msg = health.get('error', 'Unknown error')
+            logger.warning(f"Talos cluster health check failed: {error_msg}")
+            logger.warning("Server will continue running, but tool calls may fail")
 
     # Hint for users running interactively
     if sys.stdin.isatty():
