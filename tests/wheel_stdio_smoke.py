@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import csv
+import ctypes
 import hashlib
 import json
 import os
@@ -17,6 +18,7 @@ import tempfile
 import threading
 import time
 from contextlib import suppress
+from ctypes import wintypes
 from pathlib import Path
 
 import anyio
@@ -36,6 +38,84 @@ def run(*command: str) -> str:
     if result.returncode:
         raise RuntimeError(f"{command[0]} failed: {result.stdout}\n{result.stderr}")
     return result.stdout
+
+
+def windows_user_sid() -> str:
+    """Read the account SID used for private Windows test artifacts."""
+    return next(csv.reader(run("whoami", "/user", "/fo", "csv", "/nh").splitlines()))[1]
+
+
+def windows_default_owner() -> None:
+    """Make this smoke process and its children create user-owned objects."""
+    if os.name != "nt":
+        return
+    advapi = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    pointer = ctypes.c_void_p
+
+    class TokenOwner(ctypes.Structure):
+        _fields_ = [("Owner", pointer)]
+
+    advapi.ConvertStringSidToSidW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(pointer)]
+    advapi.ConvertStringSidToSidW.restype = wintypes.BOOL
+    advapi.OpenProcessToken.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.HANDLE),
+    ]
+    advapi.OpenProcessToken.restype = wintypes.BOOL
+    advapi.GetTokenInformation.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        pointer,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    advapi.GetTokenInformation.restype = wintypes.BOOL
+    advapi.SetTokenInformation.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        pointer,
+        wintypes.DWORD,
+    ]
+    advapi.SetTokenInformation.restype = wintypes.BOOL
+    advapi.EqualSid.argtypes = [pointer, pointer]
+    advapi.EqualSid.restype = wintypes.BOOL
+    kernel.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.restype = wintypes.BOOL
+    kernel.LocalFree.argtypes = [pointer]
+    kernel.LocalFree.restype = pointer
+
+    user_sid = pointer()
+    if not advapi.ConvertStringSidToSidW(windows_user_sid(), ctypes.byref(user_sid)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    token = wintypes.HANDLE()
+    try:
+        if not advapi.OpenProcessToken(kernel.GetCurrentProcess(), 0x88, ctypes.byref(token)):
+            raise ctypes.WinError(ctypes.get_last_error())
+
+        def owner_is_user() -> bool:
+            required = wintypes.DWORD()
+            advapi.GetTokenInformation(token, 4, None, 0, ctypes.byref(required))
+            if not required.value:
+                raise ctypes.WinError(ctypes.get_last_error())
+            buffer = ctypes.create_string_buffer(required.value)
+            if not advapi.GetTokenInformation(token, 4, buffer, required, ctypes.byref(required)):
+                raise ctypes.WinError(ctypes.get_last_error())
+            owner_sid = pointer.from_buffer(buffer)
+            return bool(advapi.EqualSid(owner_sid, user_sid))
+
+        print(f"Windows smoke token owner is account before: {owner_is_user()}", flush=True)
+        owner = TokenOwner(user_sid)
+        if not advapi.SetTokenInformation(token, 4, ctypes.byref(owner), ctypes.sizeof(owner)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        assert owner_is_user(), "Windows smoke token owner did not become the account SID"
+        print("Windows smoke token owner is account after: True", flush=True)
+    finally:
+        if token.value:
+            kernel.CloseHandle(token)
+        kernel.LocalFree(user_sid)
 
 
 def download_talosctl(version: str, directory: Path) -> Path:
@@ -71,10 +151,13 @@ def private_artifact_root(root: Path) -> None:
     if os.name != "nt":
         root.chmod(0o700)
         return
-    who = next(csv.reader(run("whoami", "/user", "/fo", "csv", "/nh").splitlines()))
-    sid = who[1]
+    sid = windows_user_sid()
     run("icacls", str(root), "/inheritance:r")
     run("icacls", str(root), "/grant:r", f"*{sid}:(OI)(CI)F")
+    quoted = str(root).replace("'", "''")
+    owner = run("pwsh", "-NoProfile", "-Command", f"(Get-Acl -LiteralPath '{quoted}').Owner")
+    print(f"Windows smoke artifact root owner: {owner.strip()}", flush=True)
+    print(f"Windows smoke artifact root ACL:\n{run('icacls', str(root))}", flush=True)
 
 
 def windows_process_ids() -> set[int]:
@@ -374,6 +457,7 @@ def main() -> None:
     parser.add_argument("--talosctl", type=Path)
     parser.add_argument("--artifacts", type=Path)
     args = parser.parse_args()
+    windows_default_owner()
     if args.inside:
         assert args.server and args.talosctl and args.artifacts
         asyncio.run(
