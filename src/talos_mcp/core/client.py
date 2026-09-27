@@ -408,6 +408,12 @@ class TalosClient:
 
     async def _terminate(self, child: asyncio.subprocess.Process) -> None:
         """Terminate and reap a direct child without signalling reused group IDs."""
+        # A paused full pipe can keep asyncio's process wait pending after exit.
+        # No caller needs further output once termination has begun.
+        for fd in (1, 2):
+            pipe_transport = cast("Any", child)._transport.get_pipe_transport(fd)
+            if pipe_transport is not None:
+                pipe_transport.close()
         if child.returncode is not None:
             await child.wait()
             return
@@ -667,12 +673,6 @@ class TalosClient:
                         if not task.done():
                             task.cancel()
                     await asyncio.gather(*tasks, return_exceptions=True)
-                    # A departed direct child can leave inherited pipe handles open.
-                    # Close our transports rather than waiting on an unowned helper tree.
-                    for fd in (1, 2):
-                        pipe_transport = cast("Any", child)._transport.get_pipe_transport(fd)
-                        if pipe_transport is not None:
-                            pipe_transport.close()
                     await asyncio.sleep(0)
                     self._active.discard(child)
                     self._stop_tasks.pop(child, None)

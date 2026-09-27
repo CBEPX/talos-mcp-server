@@ -1,5 +1,6 @@
 """CLI startup and server-factory contracts."""
 
+import re
 import subprocess
 import sys
 
@@ -29,6 +30,7 @@ def test_help_lists_profile_and_pinned_inputs() -> None:
         check=False,
     )
     assert result.returncode == 0
+    help_text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", result.stdout)
     for option in (
         "--profile",
         "--allow-tools",
@@ -37,7 +39,7 @@ def test_help_lists_profile_and_pinned_inputs() -> None:
         "--context",
         "--artifact-root",
     ):
-        assert option in result.stdout
+        assert option in help_text
 
 
 def test_invalid_option_fails_startup() -> None:

@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+import sysconfig
 from pathlib import Path
 
 import anyio
@@ -47,7 +48,7 @@ def test_stdio_lists_every_registered_tool_without_talosconfig(tmp_path: Path) -
 
 
 def test_installed_wheel_initializes_with_package_version(tmp_path: Path) -> None:
-    """An offline wheel install using prepared dependencies exposes MCP tools."""
+    """An isolated offline wheel install using prepared dependencies exposes MCP tools."""
     repo = Path(__file__).resolve().parents[1]
     wheels = tmp_path / "wheels"
     venv = tmp_path / "venv"
@@ -84,7 +85,7 @@ def test_installed_wheel_initializes_with_package_version(tmp_path: Path) -> Non
     assert len(built_wheels) == 1, built_wheels
 
     for command in (
-        [uv, "venv", "--system-site-packages", "--python", sys.executable, str(venv)],
+        [uv, "venv", "--python", sys.executable, str(venv)],
         [
             uv,
             "pip",
@@ -106,6 +107,16 @@ def test_installed_wheel_initializes_with_package_version(tmp_path: Path) -> Non
             check=False,
         )
         assert result.returncode == 0, result.stderr
+
+    # The nested venv does not inherit the parent's installed dependencies.
+    # Add only that dependency path after the nested venv's own site-packages.
+    site_dir = (
+        "Lib/site-packages"
+        if os.name == "nt"
+        else f"lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
+    )
+    venv_site = venv / site_dir
+    (venv_site / "test-dependencies.pth").write_text(sysconfig.get_path("purelib") + "\n")
 
     executable = scripts / ("talos-mcp-server.exe" if os.name == "nt" else "talos-mcp-server")
     env = {
