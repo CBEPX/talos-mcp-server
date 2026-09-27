@@ -3,12 +3,12 @@
 from typing import Any, Literal
 
 from mcp.types import TextContent
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from talos_mcp.tools.base import TalosTool
+from talos_mcp.tools.base import StrictSchema, TalosTool
 
 
-class VolumesSchema(BaseModel):
+class VolumesSchema(StrictSchema):
     """Schema for volumes arguments."""
 
     nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
@@ -30,6 +30,7 @@ class VolumesTool(TalosTool):
     is_mutation = True  # Supports 'unmount' action
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        """Execute this Talos tool."""
         args = VolumesSchema(**arguments)
         nodes = self.ensure_nodes(args.nodes)
         action = args.action

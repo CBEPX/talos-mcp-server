@@ -38,7 +38,7 @@ class ErrorCode(Enum):
 class TalosError(Exception):
     """Base exception for all Talos MCP errors."""
 
-    def __init__(self, message: str, code: ErrorCode = ErrorCode.UNKNOWN):
+    def __init__(self, message: str, code: ErrorCode = ErrorCode.UNKNOWN) -> None:
         """Initialize TalosError.
 
         Args:
@@ -49,7 +49,7 @@ class TalosError(Exception):
         self.message = message
         super().__init__(message)
 
-    def to_dict(self) -> dict[str, str | int]:
+    def to_dict(self) -> dict[str, str | int | list[str]]:
         """Convert error to dictionary for structured logging.
 
         Returns:
@@ -65,7 +65,7 @@ class TalosError(Exception):
 class TalosConnectionError(TalosError):
     """Raised when unable to connect to a Talos node."""
 
-    def __init__(self, message: str, code: ErrorCode = ErrorCode.CONNECTION_FAILED):
+    def __init__(self, message: str, code: ErrorCode = ErrorCode.CONNECTION_FAILED) -> None:
         """Initialize TalosConnectionError.
 
         Args:
@@ -81,8 +81,7 @@ class TalosCommandError(TalosError):
     # User-friendly error messages mapped by error code
     USER_MESSAGES: dict[ErrorCode, str] = {
         ErrorCode.COMMAND_NOT_FOUND: (
-            "talosctl not found in PATH. "
-            "Please install talosctl from https://talos.dev/install"
+            "talosctl not found in PATH. " "Please install talosctl from https://talos.dev/install"
         ),
         ErrorCode.CONNECTION_FAILED: (
             "Cannot connect to Talos node. "
@@ -120,7 +119,7 @@ class TalosCommandError(TalosError):
         returncode: int,
         stderr: str,
         code: ErrorCode = ErrorCode.COMMAND_FAILED,
-    ):
+    ) -> None:
         """Initialize TalosCommandError.
 
         Args:
@@ -195,7 +194,7 @@ class TalosCommandError(TalosError):
         Returns:
             Dictionary with error details including command.
         """
-        base_dict = super().to_dict()
+        base_dict: dict[str, str | int | list[str]] = super().to_dict()
         base_dict.update(
             {
                 "command": self.cmd,

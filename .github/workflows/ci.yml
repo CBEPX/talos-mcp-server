@@ -2,109 +2,127 @@ name: CI
 
 on:
   push:
-    branches: [main]
-    tags:
-      - "v*"
+    branches: [main, codex/talos-mcp-0.4.0-ci]
+    tags: ["v*"]
   pull_request:
     branches: [main]
 
-env:
-  PYTHON_VERSION: "3.12"
-
 jobs:
-  lint:
-    name: Lint
+  check:
+    name: Required source checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Run Ruff
-        run: uv run ruff check src/ tests/ || true
-
-      - name: Run MyPy
-        run: uv run mypy src/ || true
-
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Run tests
-        run: uv run pytest tests/ -v --ignore=tests/integration/
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v4
+      - run: uv lock --check
+      - run: uv sync --locked --group dev
+      - run: uv run --locked ruff check src tests scripts
+      - run: uv run --locked mypy src
+      - run: uv run --locked black --check src tests scripts
+      - run: uv run --locked pytest
 
   build:
-    name: Build Docker
+    name: Build release wheel once
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: check
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v4
+      - run: uv build --wheel --out-dir dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-dist
+          path: dist/
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  wheel:
+    name: Wheel stdio ${{ matrix.os }} Python ${{ matrix.python-version }} SDK ${{ matrix.sdk }}
+    runs-on: ${{ matrix.os }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        sdk: [minimum, current]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-dist
+          path: dist/
+      - name: Native installed-wheel MCP, artifacts, and cleanup
+        run: uv run --no-project --python ${{ matrix.python-version }} --with "mcp>=1.30,<2" --with pyyaml python tests/wheel_stdio_smoke.py --wheel dist --sdk ${{ matrix.sdk }}
 
-      - name: Build Docker image
-        uses: docker/build-push-action@v6
+  talos_compat:
+    name: Talos CLI ${{ matrix.talos-version }}
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        talos-version: [v1.12.1, v1.13.5, v1.13.10]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-dist
+          path: dist/
+      - run: uv run --no-project --python 3.12 --with "mcp>=1.30,<2" --with pyyaml python tests/wheel_stdio_smoke.py --wheel dist --talos-version ${{ matrix.talos-version }}
+
+  container:
+    name: Container linux/${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        id: image
         with:
           context: .
+          platforms: linux/${{ matrix.arch }}
           push: false
-          tags: talos-mcp-server:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          load: true
+          tags: talos-mcp-server:ci-${{ matrix.arch }}
+      - name: Check installed binary and record image digest
+        run: |
+          docker run --rm --platform linux/${{ matrix.arch }} --entrypoint /usr/local/bin/talosctl talos-mcp-server:ci-${{ matrix.arch }} version --client
+          docker run --rm --platform linux/${{ matrix.arch }} talos-mcp-server:ci-${{ matrix.arch }} --version
+          echo "Manifest digest: ${{ steps.image.outputs.digest }}"
+          docker image inspect --format='Image ID: {{.Id}}' talos-mcp-server:ci-${{ matrix.arch }}
 
   publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [check, build, wheel, talos_compat, container]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
-      id-token: write # Required for Trusted Publisher
+      actions: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/download-artifact@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
-      - name: Build package
-        run: uv build
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+          name: release-dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true

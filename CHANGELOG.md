@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - Unreleased
+
+### Breaking changes
+
+- The default profile is readonly. A write profile and an exact canonical tool allowlist replace the old permissive readonly switch.
+- Mixed service, image, and etcd alarm actions split into separate read and write tools. The old apply and patch names remain call-only aliases for one minor release.
+- Unsupported dashboard, packet capture, cluster-show, and volumes contracts no longer appear in the tool catalog.
+- Generic resource reads accept only runtime/machinestatus and runtime/volumestatus. Config resources return sanitized context metadata.
+- A selected talosconfig and context are explicit. A missing config permits offline tools, but authenticated node calls return CONFIG_REQUIRED.
+- `talos_cat`, `talos_cp`, `talos_kubeconfig`, `talos_etcd_snapshot`, `talos_support`, and `talos_gen_config` now require `--profile write` and `--artifact-root`. Their responses contain server-local artifact metadata instead of file content; retrieve the file through a separate reviewed transfer.
+- Authenticated writes, sensitive reads, and artifact calls require talosctl and the target node to have the same Talos minor version. Offline config generation has no node-version gate.
+
+### Added
+
+- Standalone one-node lifecycle calls use Talos version checks, bounded deadlines, typed MCP errors, and outcome-unknown results after uncertain dispatch.
+- Artifact tools use a reviewed root, private permissions or Windows ACLs, checksums, size limits, and metadata-only responses.
+- Native wheel stdio qualification covers Python 3.10 through 3.14 on Linux, macOS, and Windows in CI. The Talos CLI fixtures include 1.13.5, 1.13.10, and 1.14.1.
+- Docker builds select amd64 or arm64 and verify the version-matched talosctl SHA-256. Ansible and local or SSH client examples use pinned paths.
+- Source checks block on Ruff, MyPy, Black, pytest, and the uv lock file. Live integration needs an explicit disposable target.
+
+### Operational notes
+
+- A zero exit from a disruptive command means accepted, not recovered. Read back node and cluster state before any follow-up.
+- The operations allowlist example is for TALM-managed use. TALM retains rollout, quorum, and rollback ownership.
+- Publication and production deployment require separate qualification and authorization.
+
+## [0.3.10]
+
+The 0.4.0 work started from the v0.3.10 tag. Earlier notes below do not describe the 0.4.0 contract.
+
 ## [0.3.9] - 2026-01-21
 
 ### Changed

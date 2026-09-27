@@ -58,7 +58,7 @@ class TestTalosPrompts:
         """Test get_prompt for audit_review."""
         result = await prompts.get_prompt("audit_review")
         assert len(result) == 1
-        assert "talos_dashboard" in result[0].content.text
+        assert "talos_stats" in result[0].content.text
         assert "50 lines" in result[0].content.text
 
     async def test_get_prompt_audit_review_with_limit(self, prompts: TalosPrompts) -> None:

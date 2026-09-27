@@ -1,22 +1,26 @@
 """Resource management tools."""
 
-from typing import Any
+from typing import Any, Literal
 
 from mcp.types import TextContent
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from talos_mcp.tools.base import TalosTool
+from talos_mcp.tools.base import StrictSchema, TalosTool
 
 
-class GetResourceSchema(BaseModel):
+class GetResourceSchema(StrictSchema):
     """Schema for get resource arguments."""
 
     nodes: str | None = Field(
         default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+        description=(
+            "Comma-separated list of node IPs/hostnames. " "Defaults to all nodes if not provided."
+        ),
     )
-    resource: str = Field(description="Resource type (e.g. members, services, machineconfig)")
-    output: str = Field(default="yaml", description="Output format (yaml, json)")
+    resource: Literal["runtime/machinestatus", "runtime/volumestatus"] = Field(
+        description="Exact safe runtime resource"
+    )
+    output: Literal["yaml", "json"] = Field(default="yaml", description="Output format")
 
 
 class GetResourceTool(TalosTool):
@@ -30,16 +34,27 @@ class GetResourceTool(TalosTool):
         """Execute the tool."""
         args = GetResourceSchema(**arguments)
         nodes = self.ensure_nodes(args.nodes)
-        cmd = ["get", args.resource, "-n", nodes, "-o", args.output]
+        cmd = [
+            "get",
+            args.resource.split("/", 1)[1],
+            "--namespace",
+            "runtime",
+            "-n",
+            nodes,
+            "-o",
+            args.output,
+        ]
         return await self.execute_talosctl(cmd)
 
 
-class ListDefinitionsSchema(BaseModel):
+class ListDefinitionsSchema(StrictSchema):
     """Schema for list definitions arguments."""
 
     nodes: str | None = Field(
         default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+        description=(
+            "Comma-separated list of node IPs/hostnames. " "Defaults to all nodes if not provided."
+        ),
     )
 
 
@@ -58,12 +73,14 @@ class ListDefinitionsTool(TalosTool):
         return await self.execute_talosctl(cmd)
 
 
-class GetVolumeStatusSchema(BaseModel):
+class GetVolumeStatusSchema(StrictSchema):
     """Schema for volume status arguments."""
 
     nodes: str | None = Field(
         default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+        description=(
+            "Comma-separated list of node IPs/hostnames. " "Defaults to all nodes if not provided."
+        ),
     )
     volume: str = Field(description="Volume name (optional)", default="")
     output: str = Field(default="yaml", description="Output format (yaml, json)")
@@ -86,12 +103,14 @@ class GetVolumeStatusTool(TalosTool):
         return await self.execute_talosctl(cmd)
 
 
-class GetKernelParamStatusSchema(BaseModel):
+class GetKernelParamStatusSchema(StrictSchema):
     """Schema for kernel param status arguments."""
 
     nodes: str | None = Field(
         default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+        description=(
+            "Comma-separated list of node IPs/hostnames. " "Defaults to all nodes if not provided."
+        ),
     )
     output: str = Field(default="yaml", description="Output format (yaml, json)")
 

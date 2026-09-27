@@ -12,8 +12,8 @@ This document defines the coding standards, architectural patterns, and best pra
 - **Error Handling**: Use `try/except` blocks judiciously. Create custom exception classes for domain-specific errors.
 - **Loguru**: Use `loguru` (imported as `logger`) for all logging. Do NOT use Python's standard `logging` module.
 - **Read-Only Safety**:
-  - All mutating tools (e.g., reboot, upgrade) MUST explicitly set `is_mutation = True` in their class definition.
-  - The `TalosClient` and `server.py` enforce strict read-only mode validation based on this flag.
+  - `core/policy.py` defines each canonical operation's execution class and exact native argv forms.
+  - `TalosClient` and the tool registry enforce profile and allowlist access from that policy before every subprocess. `is_mutation` is a descriptive legacy flag, not an authorization gate.
 - **Black & Ruff**: Ensure code is formatted with Black and linted with Ruff.
 
 ## ☸️ Helm & Kubernetes
@@ -49,8 +49,8 @@ This document defines the coding standards, architectural patterns, and best pra
 - **Standard Commands**:
   - Run Unit Tests: `make test`
   - Run Linters: `make lint`
-  - Integration Tests: `make test-integration` (Requires sudo/Docker on local machine)
-  - Manual Verification: `python tests/manual_verification.py`
+  - Integration Tests: `make test-integration LAB_MANIFEST=/path/to/private/manifest.json LAB_NODE=disposable-node` (requires an operator-owned disposable node)
+  - Manual Verification: `uv run --locked python tests/manual_verification.py --talosconfig /path/to/private/talosconfig --context disposable-lab --node disposable-node --talosctl /path/to/talosctl`
 - **Structure**:
   - `tests/unit/`: Fast, isolated tests.
   - `tests/integration/`: Slower tests that might require a local Talos env.

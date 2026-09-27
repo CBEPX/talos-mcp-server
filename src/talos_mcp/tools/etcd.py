@@ -1,136 +1,93 @@
-"""Etcd management tools."""
+"""Etcd read, write, and artifact operations."""
 
-from typing import Any, Literal
+import json
+import shutil
+from typing import Any
 
 from mcp.types import TextContent
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from talos_mcp.tools.base import TalosTool
+from talos_mcp.tools.base import StrictSchema, TalosTool
 
 
-class EtcdMembersSchema(BaseModel):
-    """Schema for etcd members arguments."""
+class EtcdNodeSchema(StrictSchema):
+    """One explicit etcd node."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
+    node: str = Field(min_length=1)
 
 
 class EtcdMembersTool(TalosTool):
-    """List etcd cluster members.
-
-    Shows all etcd members with their ID, status, and peer URLs.
-    Useful for verifying cluster membership and leader status.
-
-    Examples:
-        - List members from control plane: {"nodes": "192.168.1.10"}
-
-    Common use cases:
-        - Verify etcd cluster membership
-        - Check which node is the leader
-        - Troubleshoot etcd connectivity issues
-
-    Required permissions: etcd:read (reader role)
-    """
+    """List etcd members."""
 
     name = "talos_etcd_members"
-    description = (
-        "List etcd cluster members with ID, status, and peer URLs. "
-        "Use to verify cluster membership and identify the leader. "
-        "Example: {\"nodes\": \"192.168.1.10\"} (use control plane node). "
-        "Required: etcd:read permission."
-    )
-    args_schema = EtcdMembersSchema
+    description = "List etcd members from one node."
+    args_schema = EtcdNodeSchema
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
-        """Execute the tool."""
-        args = EtcdMembersSchema(**arguments)
-        cmd = ["etcd", "members", "-n", args.nodes]
-        return await self.execute_talosctl(cmd)
-
-
-class EtcdSnapshotSchema(BaseModel):
-    """Schema for etcd snapshot arguments."""
-
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
-    path: str = Field(
-        default="/tmp/etcd.snapshot",  # noqa: S108
-        description="Path to save snapshot locally",
-    )
-
-
-class EtcdSnapshotTool(TalosTool):
-    """Create etcd backup snapshot.
-
-    Creates a point-in-time snapshot of the etcd database for backup
-    and disaster recovery purposes. The snapshot is saved to the specified
-    path on the local machine (where MCP server runs).
-
-    Examples:
-        - Create snapshot: {"nodes": "192.168.1.10", "path": "/backup/etcd-$(date +%Y%m%d).db"}
-        - Use default path: {"nodes": "192.168.1.10"}
-
-    Common use cases:
-        - Scheduled backups before upgrades
-        - Pre-migration backups
-        - Disaster recovery preparation
-
-    Required permissions: etcd:backup (admin role)
-    Note: Snapshot is taken from the specified node; ensure it's a control plane node.
-    """
-
-    name = "talos_etcd_snapshot"
-    description = (
-        "Create etcd backup snapshot for disaster recovery. "
-        "Saves point-in-time backup to specified local path. "
-        "Example: {\"nodes\": \"192.168.1.10\", \"path\": \"/backup/etcd.db\"}. "
-        "Required: etcd:backup permission. Use control plane node."
-    )
-    args_schema = EtcdSnapshotSchema
-
-    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
-        """Execute the tool."""
-        args = EtcdSnapshotSchema(**arguments)
-        cmd = ["etcd", "snapshot", args.path, "-n", args.nodes]
-        return await self.execute_talosctl(cmd)
-
-
-class EtcdAlarmSchema(BaseModel):
-    """Schema for etcd alarm arguments."""
-
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
-    action: Literal["list", "disarm"] = Field(default="list", description="Action: list, disarm")
+        """Execute this Talos tool."""
+        args = EtcdNodeSchema(**arguments)
+        return await self.execute_talosctl(["etcd", "members", "-n", args.node])
 
 
 class EtcdAlarmTool(TalosTool):
-    """Etcd alarms."""
+    """List etcd alarms."""
 
     name = "talos_etcd_alarm"
-    description = "List or disarm etcd alarms"
-    args_schema = EtcdAlarmSchema
-    is_mutation = True  # Can disarm alarms
+    description = "List etcd alarms; use talos_etcd_alarm_disarm to disarm."
+    args_schema = EtcdNodeSchema
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
-        """Execute the tool."""
-        args = EtcdAlarmSchema(**arguments)
-        cmd = ["etcd", "alarm", args.action, "-n", args.nodes]
-        return await self.execute_talosctl(cmd)
+        """Execute this Talos tool."""
+        args = EtcdNodeSchema(**arguments)
+        return await self.execute_talosctl(["etcd", "alarm", "list", "-n", args.node])
 
 
-class EtcdDefragSchema(BaseModel):
-    """Schema for etcd defrag arguments."""
+class EtcdAlarmDisarmTool(TalosTool):
+    """Disarm etcd alarms on one node."""
 
-    nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
-
-
-class EtcdDefragTool(TalosTool):
-    """Etcd defrag."""
-
-    name = "talos_etcd_defrag"
-    description = "Defragment etcd member"
-    args_schema = EtcdDefragSchema
+    name = "talos_etcd_alarm_disarm"
+    description = "Disarm etcd alarms on one explicit node."
+    args_schema = EtcdNodeSchema
     is_mutation = True
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
-        """Execute the tool."""
-        args = EtcdDefragSchema(**arguments)
-        cmd = ["etcd", "defrag", "-n", args.nodes]
-        return await self.execute_talosctl(cmd)
+        """Execute this Talos tool."""
+        args = EtcdNodeSchema(**arguments)
+        return await self.execute_talosctl(["etcd", "alarm", "disarm", "-n", args.node])
+
+
+class EtcdDefragTool(TalosTool):
+    """Defragment one etcd member."""
+
+    name = "talos_etcd_defrag"
+    description = "Defragment etcd on one explicit node."
+    args_schema = EtcdNodeSchema
+    is_mutation = True
+
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        """Execute this Talos tool."""
+        args = EtcdNodeSchema(**arguments)
+        return await self.execute_talosctl(["etcd", "defrag", "-n", args.node])
+
+
+class EtcdSnapshotTool(TalosTool):
+    """Download one etcd snapshot into a private artifact."""
+
+    name = "talos_etcd_snapshot"
+    description = "Save a single-node etcd snapshot in a unique private artifact."
+    args_schema = EtcdNodeSchema
+    is_mutation = True
+
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        """Execute this Talos tool."""
+        args = EtcdNodeSchema(**arguments)
+        directory = self.client.new_artifact_dir()
+        path = directory / "snapshot.db"
+        try:
+            await self.client.execute_talosctl(
+                ["etcd", "snapshot", str(path), "-n", args.node], operation=self.name
+            )
+            return [TextContent(type="text", text=json.dumps(self.client.artifact_metadata(path)))]
+        except BaseException:
+            shutil.rmtree(directory)
+            raise

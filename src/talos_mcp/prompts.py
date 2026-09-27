@@ -59,9 +59,9 @@ class TalosPrompts:
                         text=f"""Please analyze the Talos cluster status{node_context}.
 Run the following checks in order:
 1. Check `talos_health` to see overall cluster state.
-2. If there are unhealthy nodes, use `talos_service --node <IP>` to list failing services.
+2. If there are unhealthy nodes, use `talos_service` with `nodes` set to that node.
 3. For any failing service, get logs using `talos_logs`.
-4. Check `talos_get_stats` for resource usage.
+4. Check `talos_stats` for resource usage.
 5. Summarize the findings and recommend fixes.
 """,
                     ),
@@ -74,9 +74,9 @@ Run the following checks in order:
                 PromptMessage(
                     content=TextContent(
                         type="text",
-                        text=f"""Please review the dashboard and audit logs.
-1. Run `talos_dashboard` to get a snapshot of current activity.
-2. Check `talos_dmesg` (last {limit} lines) for any kernel errors or warnings.
+                        text=f"""Please review the available Talos diagnostics.
+1. Run `talos_stats` to get a resource usage snapshot.
+2. Check `talos_dmesg` for a bounded kernel log snapshot, then inspect up to {limit} lines.
 3. Summarize any potential security or stability issues found.
 """,
                     ),

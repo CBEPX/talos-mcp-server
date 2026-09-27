@@ -1,0 +1,6 @@
+---
+- name: Install a reviewed Talos MCP build on a jump host
+  hosts: talos_mcp_jump_hosts
+  become: true
+  roles:
+    - talos_mcp

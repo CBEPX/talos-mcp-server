@@ -1,19 +1,23 @@
 """File management tools."""
 
+import json
+import shutil
 from typing import Any
 
 from mcp.types import TextContent
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from talos_mcp.tools.base import TalosTool
+from talos_mcp.tools.base import StrictSchema, TalosTool
 
 
-class ListFilesSchema(BaseModel):
+class ListFilesSchema(StrictSchema):
     """Schema for list files arguments."""
 
     nodes: str | None = Field(
         default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+        description=(
+            "Comma-separated list of node IPs/hostnames. " "Defaults to all nodes if not provided."
+        ),
     )
     path: str = Field(default="/", description="Directory path")
 
@@ -39,7 +43,7 @@ class ListFilesTool(TalosTool):
     description = (
         "List files and directories on Talos nodes. "
         "Browse the immutable root filesystem. "
-        "Example: {\"path\": \"/etc\"} to list config files. "
+        'Example: {"path": "/etc"} to list config files. '
         "Note: Most paths are read-only due to Talos immutability."
     )
     args_schema = ListFilesSchema
@@ -52,13 +56,10 @@ class ListFilesTool(TalosTool):
         return await self.execute_talosctl(cmd)
 
 
-class ReadFileSchema(BaseModel):
+class ReadFileSchema(StrictSchema):
     """Schema for read file arguments."""
 
-    nodes: str | None = Field(
-        default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
-    )
+    node: str = Field(description="One explicit node")
     path: str = Field(description="File path to read")
 
 
@@ -72,61 +73,59 @@ class ReadFileTool(TalosTool):
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = ReadFileSchema(**arguments)
-        nodes = self.ensure_nodes(args.nodes)
-        cmd = ["read", args.path, "-n", nodes]
-        return await self.execute_talosctl(cmd)
+        directory = self.client.new_artifact_dir()
+        path = directory / "content"
+        try:
+            await self.client.execute_talosctl(
+                ["read", args.path, "-n", args.node], operation=self.name, artifact_stdout=path
+            )
+            return [TextContent(type="text", text=json.dumps(self.client.artifact_metadata(path)))]
+        except BaseException:
+            shutil.rmtree(directory)
+            raise
 
 
-class CopySchema(BaseModel):
+class CopySchema(StrictSchema):
     """Schema for copy arguments."""
 
     # Copying to/from multiple nodes is complex. `talosctl cp` might not support it for download.
     # Upload to multiple nodes works.
     # Let's support it, but behavior depends on talosctl.
-    nodes: str | None = Field(
-        default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
-    )
+    node: str = Field(description="One explicit node")
     src: str = Field(description="Source path")
-    dst: str = Field(description="Destination path")
-    direction: str = Field(
-        default="download",
-        description="Direction: upload (local->node) or download (node->local)",
-    )
 
 
 class CopyTool(TalosTool):
     """Copy files."""
 
     name = "talos_cp"
-    description = "Copy files to/from node"
+    description = "Download a remote path as a private archive artifact; upload is unavailable."
     args_schema = CopySchema
     is_mutation = True  # Can upload files to node
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
         args = CopySchema(**arguments)
-        nodes = self.ensure_nodes(args.nodes)
-
-        # talosctl cp requires -n <node> even if the target is specified as <node>:<path>
-        # to ensure it knows which context/auth to use for that node IP.
-
-        if args.direction == "upload":
-            cmd = ["cp", args.src, f"{nodes}:{args.dst}"]
-        else:
-            cmd = ["cp", f"{nodes}:{args.src}", args.dst]
-
-        cmd.extend(["-n", nodes])
-
-        return await self.execute_talosctl(cmd)
+        directory = self.client.new_artifact_dir()
+        path = directory / "copy.tar"
+        try:
+            await self.client.execute_talosctl(
+                ["cp", args.src, "-", "-n", args.node], operation=self.name, artifact_stdout=path
+            )
+            return [TextContent(type="text", text=json.dumps(self.client.artifact_metadata(path)))]
+        except BaseException:
+            shutil.rmtree(directory)
+            raise
 
 
-class DiskUsageSchema(BaseModel):
+class DiskUsageSchema(StrictSchema):
     """Schema for disk usage arguments."""
 
     nodes: str | None = Field(
         default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+        description=(
+            "Comma-separated list of node IPs/hostnames. " "Defaults to all nodes if not provided."
+        ),
     )
     path: str = Field(default="/", description="Path to check")
 
@@ -152,7 +151,7 @@ class DiskUsageTool(TalosTool):
     description = (
         "Check disk usage on Talos nodes. "
         "Monitor ephemeral storage and persistent volume space. "
-        "Example: {\"path\": \"/var\"} to check usage. "
+        'Example: {"path": "/var"} to check usage. '
         "Use for storage monitoring and troubleshooting."
     )
     args_schema = DiskUsageSchema
@@ -165,12 +164,14 @@ class DiskUsageTool(TalosTool):
         return await self.execute_talosctl(cmd)
 
 
-class MountsSchema(BaseModel):
+class MountsSchema(StrictSchema):
     """Schema for mounts arguments."""
 
     nodes: str | None = Field(
         default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+        description=(
+            "Comma-separated list of node IPs/hostnames. " "Defaults to all nodes if not provided."
+        ),
     )
 
 

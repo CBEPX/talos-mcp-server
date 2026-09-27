@@ -1,0 +1,78 @@
+---
+- name: Require immutable installation pins
+  ansible.builtin.assert:
+    that:
+      - talos_mcp_release_id is defined
+      - talos_mcp_wheelhouse is defined
+      - talos_mcp_wheel_file is defined
+      - talos_mcp_wheel_sha256 is defined
+      - talos_mcp_talosctl_sha256 is defined
+      - ansible_architecture in ['x86_64', 'aarch64']
+
+- name: Create dedicated service account
+  ansible.builtin.user:
+    name: "{{ talos_mcp_account }}"
+    system: true
+    home: /var/lib/talos-mcp
+    create_home: true
+    shell: /usr/sbin/nologin
+
+- name: Create immutable release directory
+  ansible.builtin.file:
+    path: "{{ talos_mcp_base }}/{{ talos_mcp_release_id }}/wheels"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy reviewed wheelhouse
+  ansible.builtin.copy:
+    src: "{{ talos_mcp_wheelhouse }}/"
+    dest: "{{ talos_mcp_base }}/{{ talos_mcp_release_id }}/wheels/"
+    owner: root
+    group: root
+    mode: "0644"
+    directory_mode: "0755"
+
+- name: Check reviewed project wheel
+  ansible.builtin.stat:
+    path: "{{ talos_mcp_base }}/{{ talos_mcp_release_id }}/wheels/{{ talos_mcp_wheel_file }}"
+    checksum_algorithm: sha256
+  register: talos_mcp_project_wheel
+
+- name: Reject a wheel that differs from the reviewed build
+  ansible.builtin.assert:
+    that:
+      - talos_mcp_project_wheel.stat.exists
+      - talos_mcp_project_wheel.stat.checksum == talos_mcp_wheel_sha256
+
+- name: Download version-matched talosctl with checksum verification
+  ansible.builtin.get_url:
+    url: "https://github.com/siderolabs/talos/releases/download/{{ talos_mcp_talosctl_version }}/talosctl-linux-{{ {'x86_64': 'amd64', 'aarch64': 'arm64'}[ansible_architecture] }}"
+    dest: "{{ talos_mcp_base }}/{{ talos_mcp_release_id }}/talosctl"
+    checksum: "sha256:{{ talos_mcp_talosctl_sha256 }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create isolated Python environment
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -m
+      - venv
+      - "{{ talos_mcp_base }}/{{ talos_mcp_release_id }}/venv"
+    creates: "{{ talos_mcp_base }}/{{ talos_mcp_release_id }}/venv/bin/python"
+
+- name: Install reviewed wheel and dependencies without network access
+  ansible.builtin.command:
+    argv:
+      - "{{ talos_mcp_base }}/{{ talos_mcp_release_id }}/venv/bin/python"
+      - -m
+      - pip
+      - install
+      - --no-index
+      - --find-links
+      - "{{ talos_mcp_base }}/{{ talos_mcp_release_id }}/wheels"
+      - "talos-mcp-server=={{ talos_mcp_version }}"
+    creates: "{{ talos_mcp_base }}/{{ talos_mcp_release_id }}/venv/bin/talos-mcp-server"

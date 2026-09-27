@@ -202,7 +202,9 @@ class TestTalosCommandError:
     def test_command_error_get_user_message_auth_failed(self):
         """Test get_user_message for authentication error."""
         cmd = ["talosctl", "version"]
-        error = TalosCommandError(cmd, 1, "authentication failed: certificate signed by unknown authority")
+        error = TalosCommandError(
+            cmd, 1, "authentication failed: certificate signed by unknown authority"
+        )
 
         message = error.get_user_message()
 
