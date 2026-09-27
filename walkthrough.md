@@ -43,4 +43,4 @@ make test-integration LAB_MANIFEST=/path/to/private/manifest.json LAB_NODE=dispo
 
 The runner calls the readback before and after one operation. It never retries an uncertain mutation. It closes the MCP stdio process when the call ends. The VM owner controls VM creation, power-on, and cleanup. For reboot, shutdown, reset, and upgrade, make separate readbacks after the node returns. Check Kubernetes cordon state and cluster health before another operation.
 
-Record the wheel digest, CLI digest, Talos node version, command result, independent readbacks, and unresolved failures. Keep private evidence outside the public source tree. Windows Actions, ARM64 container, and live Talos results remain pending until their actual jobs or lab runs report success.
+Record the wheel digest, CLI digest, Talos node version, command result, independent readbacks, and unresolved failures. Keep private evidence outside the public source tree. See [task.md](task.md) for the completed 0.4.0 qualification and its limits. Windows Actions and ARM64 container checks passed; ARM64 Talos VM lifecycle remains incomplete.
