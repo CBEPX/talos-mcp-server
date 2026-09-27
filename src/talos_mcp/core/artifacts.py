@@ -87,6 +87,7 @@ def _private_dacl(advapi: Any, kernel: Any, dacl: ctypes.c_void_p, user_sid: int
     acl_header = ctypes.string_at(dacl, 8)
     count = int.from_bytes(acl_header[4:6], "little")
     found_user = False
+    found_owner_rights = False
     for index in range(count):
         ace = ctypes.c_void_p()
         if not advapi.GetAce(dacl, index, ctypes.byref(ace)) or not ace.value:
@@ -107,9 +108,11 @@ def _private_dacl(advapi: Any, kernel: Any, dacl: ctypes.c_void_p, user_sid: int
             kernel.LocalFree(sid_text)
         # Local administrators already have recovery privileges; OWNER RIGHTS
         # applies only to the verified current-account owner.
+        if name == "S-1-3-4":
+            found_owner_rights = True
         if name not in {"S-1-5-18", "S-1-5-32-544", "S-1-3-4"}:
             return False
-    return found_user
+    return found_user or found_owner_rights
 
 
 def windows_private_acl(path: Path) -> bool:

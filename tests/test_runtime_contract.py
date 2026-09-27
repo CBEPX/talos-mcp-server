@@ -853,21 +853,16 @@ def test_windows_private_artifact_root_can_be_selected(  # noqa: PLR0915
     kernel.LocalFree.argtypes = [ctypes.c_void_p]
     kernel.LocalFree.restype = ctypes.c_void_p
 
-    def set_dacl(path: Path, sddl: str) -> None:
+    def set_dacl(path: Path, sddl: str, *, set_owner: bool = False) -> None:
         descriptor = ctypes.c_void_p()
         assert advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW(
             sddl, 1, ctypes.byref(descriptor), None
         )
         try:
-            assert advapi.SetFileSecurityW(str(path), 0x4, descriptor)
+            assert advapi.SetFileSecurityW(str(path), 0x5 if set_owner else 0x4, descriptor)
         finally:
             kernel.LocalFree(descriptor)
 
-    root = tmp_path / "private"
-    root.mkdir()
-    set_dacl(root, "D:P(A;;FA;;;OW)(A;;FA;;;SY)(A;;FA;;;BA)")
-    assert windows_private_acl(root) is False  # No direct current-account ACE.
-    # OWNER RIGHTS alone is insufficient; add an exact current-account ACE.
     advapi.OpenProcessToken.argtypes = [
         wintypes.HANDLE,
         wintypes.DWORD,
@@ -902,13 +897,15 @@ def test_windows_private_artifact_root_can_be_selected(  # noqa: PLR0915
             kernel.LocalFree(sid_text)
     finally:
         kernel.CloseHandle(token)
+    root = tmp_path / "private"
+    root.mkdir()
+    # Python 3.12+ uses this OWNER RIGHTS DACL for mkdir(mode=0o700).
+    set_dacl(root, f"O:{user}D:P(A;;FA;;;OW)(A;;FA;;;SY)(A;;FA;;;BA)", set_owner=True)
+    assert windows_private_acl(root) is True
     set_dacl(root, f"D:P(A;;FA;;;{user})(A;;FA;;;SY)(A;;FA;;;BA)(A;;FA;;;OW)")
     assert windows_private_acl(root) is True
     client = TalosClient(profile="write", artifact_root=str(root))
     assert client.artifact_root == root
-    output = client.new_artifact_dir() / "snapshot"
-    output.write_bytes(b"private")
-    assert client.artifact_metadata(output)["size"] == 7
     set_dacl(root, f"D:P(A;;FA;;;{user})(A;;FA;;;WD)")
     assert windows_private_acl(root) is False
 

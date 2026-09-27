@@ -118,6 +118,14 @@ def windows_default_owner() -> None:
         kernel.LocalFree(user_sid)
 
 
+def windows_acl_readback(path: Path) -> None:
+    """Show the owner and full ACL of one task-owned Windows test directory."""
+    quoted = str(path).replace("'", "''")
+    owner = run("pwsh", "-NoProfile", "-Command", f"(Get-Acl -LiteralPath '{quoted}').Owner")
+    print(f"Windows smoke {path.name} owner: {owner.strip()}", flush=True)
+    print(f"Windows smoke {path.name} ACL:\n{run('icacls', str(path))}", flush=True)
+
+
 def download_talosctl(version: str, directory: Path) -> Path:
     """Download one release asset and compare its digest with the source pin."""
     system = {"Darwin": "darwin", "Linux": "linux", "Windows": "windows"}[platform.system()]
@@ -154,10 +162,7 @@ def private_artifact_root(root: Path) -> None:
     sid = windows_user_sid()
     run("icacls", str(root), "/inheritance:r")
     run("icacls", str(root), "/grant:r", f"*{sid}:(OI)(CI)F")
-    quoted = str(root).replace("'", "''")
-    owner = run("pwsh", "-NoProfile", "-Command", f"(Get-Acl -LiteralPath '{quoted}').Owner")
-    print(f"Windows smoke artifact root owner: {owner.strip()}", flush=True)
-    print(f"Windows smoke artifact root ACL:\n{run('icacls', str(root))}", flush=True)
+    windows_acl_readback(root)
 
 
 def windows_process_ids() -> set[int]:
@@ -211,6 +216,26 @@ def wait_native_gone(pids: set[int]) -> None:
             return
         time.sleep(0.1)
     raise AssertionError(f"native talosctl survived cancellation or EOF: {sorted(pids)}")
+
+
+async def check_windows_artifact_rejection(
+    session: ClientSession, controlplane: Path, reviewed: str
+) -> None:
+    """Reject broad access and a foreign owner on a generated native artifact."""
+    run("icacls", str(controlplane), "/grant", "*S-1-1-0:R")
+    try:
+        rejected = await session.call_tool("talos_validate_config", {"file": reviewed})
+        assert rejected.isError, rejected
+        assert rejected.structuredContent["code"] == "ARTIFACT_INVALID"
+    finally:
+        run("icacls", str(controlplane), "/remove", "*S-1-1-0")
+    run("icacls", str(controlplane), "/setowner", "*S-1-5-32-544")
+    try:
+        rejected = await session.call_tool("talos_validate_config", {"file": reviewed})
+        assert rejected.isError, rejected
+        assert rejected.structuredContent["code"] == "ARTIFACT_INVALID"
+    finally:
+        run("icacls", str(controlplane), "/setowner", f"*{windows_user_sid()}")
 
 
 async def check_mcp(executable: Path, talosctl: Path, root: Path, compatibility_only: bool) -> None:
@@ -288,11 +313,7 @@ async def check_mcp(executable: Path, talosctl: Path, root: Path, compatibility_
             validated = await session.call_tool("talos_validate_config", {"file": reviewed})
             assert not validated.isError, validated
             if os.name == "nt":
-                run("icacls", str(controlplane), "/grant", "*S-1-1-0:R")
-                rejected = await session.call_tool("talos_validate_config", {"file": reviewed})
-                assert rejected.isError, rejected
-                assert rejected.structuredContent["code"] == "ARTIFACT_INVALID"
-                run("icacls", str(controlplane), "/remove", "*S-1-1-0")
+                await check_windows_artifact_rejection(session, controlplane, reviewed)
 
 
 # One native subprocess test owns the TLS stall, notification, EOF, and PID readback.
@@ -491,6 +512,12 @@ def main() -> None:
             run("uv", "pip", "install", "--python", str(python), "mcp>=1.30,<2")
         root = directory / "artifacts"
         private_artifact_root(root)
+        if os.name == "nt":
+            probe = Path(tempfile.mkdtemp(prefix="acl-probe-", dir=root))
+            try:
+                windows_acl_readback(probe)
+            finally:
+                probe.rmdir()
         run(
             str(python),
             str(Path(__file__).resolve()),
