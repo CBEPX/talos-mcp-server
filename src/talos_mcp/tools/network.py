@@ -3,12 +3,12 @@
 from typing import Any
 
 from mcp.types import TextContent
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from talos_mcp.tools.base import TalosTool
+from talos_mcp.tools.base import StrictSchema, TalosTool
 
 
-class InterfacesSchema(BaseModel):
+class InterfacesSchema(StrictSchema):
     """Schema for interfaces arguments."""
 
     nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
@@ -30,7 +30,7 @@ class InterfacesTool(TalosTool):
         return await self.execute_talosctl(["get", "addresses", "-n", args.nodes])
 
 
-class RoutesSchema(BaseModel):
+class RoutesSchema(StrictSchema):
     """Schema for routes arguments."""
 
     nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
@@ -50,7 +50,7 @@ class RoutesTool(TalosTool):
         return await self.execute_talosctl(cmd)
 
 
-class NetstatSchema(BaseModel):
+class NetstatSchema(StrictSchema):
     """Schema for netstat arguments."""
 
     nodes: str = Field(description="Comma-separated list of node IPs/hostnames")
@@ -70,7 +70,7 @@ class NetstatTool(TalosTool):
         return await self.execute_talosctl(cmd)
 
 
-class PcapSchema(BaseModel):
+class PcapSchema(StrictSchema):
     """Schema for pcap arguments."""
 
     nodes: str = Field(description="Comma-separated list of node IPs/hostnames")

@@ -3,18 +3,26 @@
 from typing import Any
 
 from mcp.types import TextContent
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from talos_mcp.tools.base import CachedTool, TalosTool
+from talos_mcp.tools.base import CachedTool, StrictSchema, TalosTool
 
 
-class NodesSchema(BaseModel):
+class NodesSchema(StrictSchema):
     """Schema for node arguments."""
 
     nodes: str | None = Field(
         default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
+        description=(
+            "Comma-separated list of node IPs/hostnames. " "Defaults to all nodes if not provided."
+        ),
     )
+
+
+class GetVersionSchema(NodesSchema):
+    """Choose an authenticated node read or offline pinned client version."""
+
+    client_only: bool = False
 
 
 class GetVersionTool(CachedTool):
@@ -38,14 +46,18 @@ class GetVersionTool(CachedTool):
         "Get Talos Linux version information from nodes. "
         "Returns Talos OS version, Kubernetes version, and containerd version. "
         "Use to verify cluster version consistency after upgrades or for auditing. "
-        "Example: {} for all nodes, or {\"nodes\": \"192.168.1.10\"} for specific node."
+        'Example: {} for all nodes, or {"nodes": "192.168.1.10"} for specific node.'
     )
-    args_schema = NodesSchema
+    args_schema = GetVersionSchema
     cache_ttl = 300.0  # Cache for 5 minutes (version rarely changes)
 
     async def _run_impl(self, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute the tool."""
-        args = NodesSchema(**arguments)
+        args = GetVersionSchema(**arguments)
+        if args.client_only:
+            if args.nodes is not None:
+                raise ValueError("client_only cannot be combined with nodes")
+            return await self.execute_talosctl(["version", "--client"])
         nodes = self.ensure_nodes(args.nodes)
         return await self.execute_talosctl(["version", "-n", nodes])
 
@@ -77,7 +89,7 @@ class GetHealthTool(TalosTool):
         "Check health status of Talos cluster. "
         "Verifies API server, etcd, Kubernetes components, and node readiness. "
         "Note: Uses first available node as endpoint (cluster-wide check). "
-        "Example: {} for cluster health, or {\"nodes\": \"192.168.1.10\"} for specific endpoint."
+        'Example: {} for cluster health, or {"nodes": "192.168.1.10"} for specific endpoint.'
     )
     args_schema = NodesSchema
 
@@ -91,7 +103,10 @@ class GetHealthTool(TalosTool):
         node_list = nodes.split(",")
         target_node = node_list[0]
 
-        return await self.execute_talosctl(["health", "-n", target_node])
+        wait_seconds = max(1, int(self.client.timeout * 0.75))
+        return await self.execute_talosctl(
+            ["health", "-n", target_node, "--wait-timeout", f"{wait_seconds}s"]
+        )
 
 
 class GetStatsTool(TalosTool):
@@ -116,7 +131,7 @@ class GetStatsTool(TalosTool):
         "Get container stats (CPU/Memory usage) from nodes. "
         "Shows resource consumption of running containers. "
         "Use for capacity planning and identifying resource bottlenecks. "
-        "Example: {} for all nodes, or {\"nodes\": \"192.168.1.10\"} for specific node."
+        'Example: {} for all nodes, or {"nodes": "192.168.1.10"} for specific node.'
     )
     args_schema = NodesSchema
 
@@ -186,7 +201,8 @@ class DashboardTool(TalosTool):
             TextContent(
                 type="text",
                 text=(
-                    "The Talos dashboard is an interactive TUI and cannot be rendered through MCP.\n\n"
+                    "The Talos dashboard is an interactive TUI and cannot be "
+                    "rendered through MCP.\n\n"
                     "Alternative tools for monitoring:\n"
                     "- talos_stats: Container CPU/Memory usage\n"
                     "- talos_memory: System memory details\n"

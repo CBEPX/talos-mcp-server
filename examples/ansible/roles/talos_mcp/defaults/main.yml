@@ -1,0 +1,5 @@
+---
+talos_mcp_account: talos-mcp
+talos_mcp_base: /opt/talos-mcp/releases
+talos_mcp_version: "0.4.0"
+talos_mcp_talosctl_version: "{{ lookup('file', playbook_dir + '/../../.talosctl-version') | trim }}"

@@ -30,7 +30,6 @@ talos-mcp-server/
 │   │   ├── test_ro.py            # Read-only integration tests
 │   │   └── test_rw.py            # Read-write integration tests
 │   ├── test_base.py              # Unit tests for TalosTool
-│   ├── test_logging.py           # Logging verification tests
 │   ├── test_new_tools.py         # Unit tests for new tools
 │   ├── verify_tools.py           # Tool registration verification
 │   └── wait_for_ready.py         # Cluster readiness wait script

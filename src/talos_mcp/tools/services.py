@@ -1,134 +1,141 @@
-"""Services management tools."""
+"""Bounded service and diagnostic tools."""
 
-from typing import Any
+from typing import Any, Literal
 
-from mcp.types import TextContent
-from pydantic import BaseModel, Field
+from mcp.types import CallToolResult, TextContent
+from pydantic import Field
 
-from talos_mcp.tools.base import TalosTool
+from talos_mcp.tools.base import StrictSchema, TalosTool
 
 
-class ServiceSchema(BaseModel):
-    """Schema for service arguments."""
+class ServiceSchema(StrictSchema):
+    """Read one service status, or list services when omitted."""
 
-    nodes: str | None = Field(
-        default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
-    )
-    action: str = Field(default="status", description="Action: status, start, stop, restart")
-    service: str | None = Field(default=None, description="Service name (optional for status)")
+    nodes: str | None = None
+    service: str | None = None
 
 
 class ServiceTool(TalosTool):
-    """Service operations."""
+    """Read service status only."""
 
     name = "talos_service"
-    description = "Manage services"
+    description = "Read service status. Use talos_service_action to start, stop, or restart."
     args_schema = ServiceSchema
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
-        """Execute the tool."""
+        """Execute this Talos tool."""
         args = ServiceSchema(**arguments)
-        # talosctl service <id> --node <node> (for status)
-        # talosctl service <id> start --node <node>
-        # If action is status and no service, list all? `talosctl service` lists all.
-
         cmd = ["service"]
         if args.service:
             cmd.append(args.service)
-
-        if args.action != "status":
-            cmd.append(args.action)
-
-        nodes = self.ensure_nodes(args.nodes)
-        cmd.extend(["-n", nodes])
+        cmd.extend(["-n", self.ensure_nodes(args.nodes)])
         return await self.execute_talosctl(cmd)
 
 
-class LogsSchema(BaseModel):
-    """Schema for logs arguments."""
+class ServiceActionSchema(StrictSchema):
+    """One explicit service action on one node."""
 
-    nodes: str | None = Field(
-        default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
-    )
-    service: str = Field(description="Service name or container name")
-    lines: int = Field(default=100, description="Number of lines to tail")
-    follow: bool = Field(default=False, description="Follow logs")
+    node: str
+    service: str
+    action: Literal["start", "stop", "restart"]
+
+
+class ServiceActionTool(TalosTool):
+    """Start, stop, or restart one service on one node."""
+
+    name = "talos_service_action"
+    description = "Mutate one service on one explicit node."
+    args_schema = ServiceActionSchema
+    is_mutation = True
+
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+        """Execute this Talos tool."""
+        args = ServiceActionSchema(**arguments)
+        return await self.execute_talosctl(["service", args.service, args.action, "-n", args.node])
+
+
+class LogsSchema(StrictSchema):
+    """Finite service log snapshot."""
+
+    nodes: str | None = None
+    service: str
+    lines: int = Field(default=100, ge=1, le=2000)
 
 
 class LogsTool(TalosTool):
-    """Get service logs."""
+    """Read a finite service log snapshot."""
 
     name = "talos_logs"
-    description = "Get logs from services"
+    description = "Read 1..2000 past service log lines; streaming is unavailable."
     args_schema = LogsSchema
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
-        """Execute the tool."""
+        """Execute this Talos tool."""
         args = LogsSchema(**arguments)
-        nodes = self.ensure_nodes(args.nodes)
-        cmd = ["logs", args.service, "-n", nodes, "--tail", str(args.lines)]
-        if args.follow:
-            cmd.append("--follow")
-        return await self.execute_talosctl(cmd)
+        return await self.execute_talosctl(
+            ["logs", args.service, "-n", self.ensure_nodes(args.nodes), "--tail", str(args.lines)]
+        )
 
 
-class DmesgSchema(BaseModel):
-    """Schema for dmesg arguments."""
+class DmesgSchema(StrictSchema):
+    """Finite kernel log snapshot."""
 
-    nodes: str | None = Field(
-        default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
-    )
-    follow: bool = Field(default=False, description="Follow logs")
+    nodes: str | None = None
 
 
 class DmesgTool(TalosTool):
-    """Get kernel logs."""
+    """Read kernel logs once."""
 
     name = "talos_dmesg"
-    description = "Get kernel logs (dmesg)"
+    description = "Read a bounded kernel log snapshot."
     args_schema = DmesgSchema
 
     async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
-        """Execute the tool."""
+        """Execute this Talos tool."""
         args = DmesgSchema(**arguments)
-        nodes = self.ensure_nodes(args.nodes)
-        cmd = ["dmesg", "-n", nodes]
-        if args.follow:
-            cmd.append("--follow")
-        return await self.execute_talosctl(cmd)
+        return await self.execute_talosctl(
+            ["dmesg", "-n", self.ensure_nodes(args.nodes), "--follow=false"]
+        )
 
 
-class EventsSchema(BaseModel):
-    """Schema for events arguments."""
+class EventsSchema(StrictSchema):
+    """Finite event observation with history or tail selection."""
 
-    nodes: str | None = Field(
-        default=None,
-        description="Comma-separated list of node IPs/hostnames. Defaults to all nodes if not provided.",
-    )
-    duration: str = Field(default="0s", description="Duration to stream events (0s = forever)")
+    nodes: str | None = None
+    tail: int | None = Field(default=None, ge=1, le=500)
+    lookback_seconds: int | None = Field(default=None, ge=1, le=3600)
+    window_seconds: int = Field(default=5, ge=1, le=30)
 
 
 class EventsTool(TalosTool):
-    """Get events."""
+    """Observe Talos events for one short window."""
 
     name = "talos_events"
-    description = "Get system events"
+    description = "Observe events for 1..30 seconds with tail or history selection."
     args_schema = EventsSchema
 
-    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
-        """Execute the tool."""
+    async def run(self, arguments: dict[str, Any]) -> CallToolResult:
+        """Execute this Talos tool."""
         args = EventsSchema(**arguments)
-        nodes = self.ensure_nodes(args.nodes)
-        cmd = ["events", "-n", nodes]
-        # events streams forever by default.
-        # We should probably limit it for MCP unless using SSE streaming properly.
-        # But 'call_tool' expects a return. So we probably just want a snapshot or short duration?
-        # Actually `talosctl events` streams.
-        # For now, let's just run it. If it blocks, it blocks.
-        if args.duration != "0s":
-            cmd.extend(["--duration", args.duration])
-
-        return await self.execute_talosctl(cmd)
+        if (args.tail is None) == (args.lookback_seconds is None):
+            raise ValueError("Exactly one of tail or lookback_seconds is required")
+        cmd = ["events", "-n", self.ensure_nodes(args.nodes)]
+        if args.tail is not None:
+            cmd.extend(["--tail", str(args.tail)])
+        else:
+            cmd.extend(["--duration", f"{args.lookback_seconds}s"])
+        result = await self.client.execute_talosctl(
+            cmd, operation=self.name, observation_window=args.window_seconds
+        )
+        return CallToolResult(
+            content=[TextContent(type="text", text=result["stdout"])],
+            isError=False,
+            structuredContent={
+                "code": "OK",
+                "outcome": "complete",
+                "exit_code": 0,
+                "complete": True,
+                "truncated": False,
+                "complete_window": result["complete_window"],
+            },
+        )

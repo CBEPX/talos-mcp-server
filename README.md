@@ -1,432 +1,114 @@
 # Talos MCP Server
 
-An MCP (Model Context Protocol) server that provides seamless integration with Talos Linux clusters. This server enables Claude to interact with your Talos infrastructure through the native gRPC API.
+Talos MCP Server runs as a Python stdio server. It calls a pinned talosctl binary. The server does not connect to Talos through a separate Python gRPC client.
 
-## Features
+Version 0.4.0 is a breaking repair release. Its default profile is readonly. A separate write profile enables standalone operations when the operator supplies suitable Talos credentials. An exact tool allowlist can restrict either profile.
 
-- 🔌 **MCP Resources**: Direct access to node health, version, and config via URI
-- 📝 **MCP Prompts**: Intelligent templates for diagnosing clusters and reviewing audits
-- 🔧 **Cluster Management**: Bootstrap, upgrade, reset, and manage node lifecycle
-- 💾 **Disk & Hardware**: Inspect disks, mounts, PCI, USB, and system devices
-- 📊 **Monitoring**: Access logs, dmesg, services, and real-time dashboard data
-- 🔍 **File System**: Browse and read files on Talos nodes
-- 🔐 **etcd Integration**: Manage members, snapshots, alarms, and defragmentation
-- ☸️ **Kubernetes Config**: Retrieve kubeconfig for cluster access
-- ⚙️ **Configuration**: Patches, validation, and machine config management
-- 📡 **Resource Inspection**: Query any Talos resource (similar to kubectl get)
+## Install a reviewed build
 
-## What is Talos Linux?
+Use Python 3.10 or newer. Install a talosctl release that matches the Talos minor version on the node. This repository pins the default CLI release in .talosctl-version and records official release checksums in talosctl-checksums.txt. Install a reviewed wheel into a dedicated environment:
 
-Talos Linux is a modern, secure, and immutable Linux distribution designed specifically for Kubernetes. Key features:
+~~~sh
+uv build --wheel
+python3 -m venv /opt/talos-mcp/venv
+/opt/talos-mcp/venv/bin/python -m pip install dist/talos_mcp_server-0.4.0-py3-none-any.whl
+/opt/talos-mcp/venv/bin/talos-mcp-server --version
+~~~
 
-- **API-Managed**: Completely managed via a declarative gRPC API (no SSH)
-- **Immutable**: Read-only root filesystem for enhanced security
-- **Minimal**: Only includes components necessary to run Kubernetes
-- **Secure by Default**: Kernel hardened following KSPP recommendations
+The package version is static metadata. A source checkout needs an editable install or a rebuilt wheel after code changes. A wheel install includes Python dependencies. Install talosctl separately and supply its absolute path with --talosctl.
 
-## Prerequisites
+The server can start without a Talos configuration file. In that state, talos_config_info, offline validation, and talos_version with client_only=true work. Authenticated node tools return CONFIG_REQUIRED. Set --talosconfig and, if needed, --context for cluster calls. The CLI uses that context for the server lifetime and passes it to each authenticated child.
 
-1. **Python 3.10+**
-2. **uv** - Fast Python package installer
-3. **talosctl** - Talos CLI tool
-4. **Talos Configuration** - A valid talosconfig file (usually at `~/.talos/config`)
+## Profiles and tools
 
-## Installation
+The default readonly profile exposes diagnostic tools only. --profile write exposes all qualified canonical tools unless --allow-tools narrows the catalog. The comma-separated allowlist accepts exact canonical names. Unknown names, wildcards, aliases, and write tools in a readonly list stop startup. A Talos credential does not override the server profile or allowlist.
 
-### Option 1: Install from PyPI (Recommended)
+The main changed calls are:
 
-```bash
-pip install talos-mcp-server
-```
+| Purpose | Canonical tool | Profile |
+| --- | --- | --- |
+| Node and client version | talos_version | readonly |
+| Cluster health | talos_health | readonly |
+| Service status | talos_service | readonly |
+| Service start, stop, or restart | talos_service_action | write |
+| Image list | talos_image | readonly |
+| Image pull | talos_image_pull | write |
+| etcd alarm list | talos_etcd_alarm | readonly |
+| etcd alarm disarm and defrag | talos_etcd_alarm_disarm, talos_etcd_defrag | write |
+| Offline configuration validation | talos_validate_config | readonly |
+| Offline configuration generation | talos_gen_config | write |
+| Apply or patch machine configuration | talos_apply_config, talos_machineconfig_patch | write |
+| Bootstrap, reboot, shutdown, reset, upgrade | talos_bootstrap, talos_reboot, talos_shutdown, talos_reset, talos_upgrade | write |
 
-Or with uv:
-```bash
-uv pip install talos-mcp-server
-```
+The full catalog is the response to tools/list for the selected profile. Old mixed service, image, and alarm actions return INVALID_ARGUMENT; use the separate read and write tools in the table above. talos_apply and talos_patch are call-only aliases for one minor release and do not appear in tools/list. talos_volumes, talos_pcap, talos_dashboard, and talos_cluster_show are unsupported. talos_get accepts only exact runtime/machinestatus and runtime/volumestatus. Logs, dmesg, and events return bounded snapshots.
 
-### Option 2: Install from Source
+The talos://{node}/version, talos://{node}/health, and talos://{node}/config resources appear only when their backing tool is enabled. The config resource returns sanitized context metadata. It does not return the full talosconfig.
 
-```bash
-git clone https://github.com/CBEPX/talos-mcp-server.git
-cd talos-mcp-server
-uv venv && source .venv/bin/activate
-uv pip install -e .
-```
+## Local Codex and Claude Code
 
-### Install talosctl
+Set these values to absolute paths on the computer that starts the MCP server. Use a Talos os:reader credential for the readonly entry.
 
-```bash
-# macOS
-brew install siderolabs/tap/talosctl
+~~~sh
+MCP_SERVER=/opt/talos-mcp/venv/bin/talos-mcp-server
+TALOSCTL=/opt/talos-mcp/talosctl/v1.14.1/talosctl
+READER_CONFIG=/path/to/reader-talosconfig
+READ_TOOLS=talos_version,talos_health,talos_service,talos_logs,talos_dmesg,talos_events,talos_get,talos_config_info
 
-# Linux
-curl -sL https://talos.dev/install | sh
-```
+codex mcp add talos-read -- "$MCP_SERVER" --profile readonly --talosctl "$TALOSCTL" --talosconfig "$READER_CONFIG" --allow-tools "$READ_TOOLS"
+claude mcp add -s local talos-read -- "$MCP_SERVER" --profile readonly --talosctl "$TALOSCTL" --talosconfig "$READER_CONFIG" --allow-tools "$READ_TOOLS"
+~~~
 
-### 4. Docker Support
+An operations entry is optional. Create it only for the reviewed action set and a separate credential. For a TALM-managed cluster, TALM keeps ownership of ordering, quorum, rollout, and rollback:
 
-You can also run the server using Docker.
+~~~sh
+OPERATOR_CONFIG=/path/to/operator-talosconfig
+OPERATIONS=talos_service_action,talos_image_pull,talos_etcd_alarm_disarm,talos_etcd_defrag
 
-```bash
-# Build the image
-docker build -t talos-mcp-server .
-
-# Run the container (make sure to mount your talos config)
-docker run --rm -i \
-  -v $HOME/.talos:/root/.talos:ro \
-  -e TALOSCONFIG=/root/.talos/config \
-  talos-mcp-server
-```
-
-Or using Docker Compose for development:
-
-```bash
-docker-compose up --build
-```
-
-## Configuration
-
-### Talos Configuration
-
-Ensure you have a valid Talos configuration file. This is typically created when you set up your Talos cluster:
-
-```bash
-# Generate config (if setting up new cluster)
-talosctl gen config my-cluster https://<control-plane-ip>:6443
-
-# Check your current config
-talosctl config info
-
-# View available contexts
-talosctl config contexts
-```
-
-The MCP server will automatically use your default Talos configuration from `~/.talos/config`.
-
-### Client Integration
-
-#### Claude Desktop
-
-To use this MCP server with Claude Desktop, add it to your configuration:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "talos": {
-      "command": "talos-mcp-server",
-      "env": {
-        "TALOSCONFIG": "/path/to/your/.talos/config",
-        "TALOS_MCP_LOG_LEVEL": "INFO",
-        "TALOS_MCP_AUDIT_LOG_PATH": "talos_mcp_audit.log"
-      }
-    }
-  }
-}
-```
-
-#### Cursor
-
-1. Open **Cursor Settings**
-2. Go to **Features** > **MCP Servers**
-3. Click **+ Add New MCP Server**
-4. Fill in the details:
-   - **Name**: `talos`
-   - **Type**: `stdio`
-   - **Command**: `talos-mcp-server`
-   - **Environment Variables**: Add `TALOSCONFIG` pointing to your config file
-
-#### Google Antigravity / Generic JSON
-
-For other clients supporting the Model Context Protocol (including Perplexity or generic integrations), use the standard server definition. You can configure the server using CLI arguments (Typer) or Environment Variables.
-
-**Example using CLI arguments:**
-
-```json
-{
-  "mcpServers": {
-    "talos": {
-      "command": "talos-mcp-server",
-      "args": [
-        "--log-level", "DEBUG",
-        "--readonly"
-      ],
-      "env": {
-        "TALOSCONFIG": "${HOME}/.talos/config"
-      }
-    }
-  }
-}
-```
-
-**Example using Environment Variables:**
-
-```json
-{
-  "mcpServers": {
-    "talos": {
-      "command": "talos-mcp-server",
-      "env": {
-        "TALOSCONFIG": "${HOME}/.talos/config",
-        "TALOS_MCP_READONLY": "true",
-        "TALOS_MCP_LOG_LEVEL": "INFO"
-      }
-    }
-  }
-}
-```
-
-#### Configuration Options
-
-The server uses `Typer` for CLI arguments and `Pydantic Settings` for environment variables. You can mix and match, but CLI arguments take precedence.
-
-| Environment Variable | CLI Argument | Description | Default |
-|----------------------|--------------|-------------|---------|
-| `TALOSCONFIG` | N/A | Path to talosconfig file | `~/.talos/config` |
-| `TALOS_MCP_LOG_LEVEL` | `--log-level` | Logging verbosity (DEBUG, INFO, etc) | `INFO` |
-| `TALOS_MCP_AUDIT_LOG_PATH` | `--audit-log` | Path to JSON audit log file | `talos_mcp_audit.log` |
-| `TALOS_MCP_READONLY` | `--readonly` / `--no-readonly` | Enable/Disable read-only mode | `false` |
+codex mcp add talos-ops -- "$MCP_SERVER" --profile write --talosctl "$TALOSCTL" --talosconfig "$OPERATOR_CONFIG" --allow-tools "$OPERATIONS"
+claude mcp add -s local talos-ops -- "$MCP_SERVER" --profile write --talosctl "$TALOSCTL" --talosconfig "$OPERATOR_CONFIG" --allow-tools "$OPERATIONS"
+~~~
 
-## Available Tools
+This restricted operations entry is a deployment example. Standalone --profile write with no allowlist can expose all qualified canonical operations. Use a credential with the Talos role required by each operation. A Talos role alone does not restrict lifecycle actions inside this server.
 
-### Cluster Lifecycle
+## Codex and Claude Code through SSH
 
-- **talos_bootstrap**: Bootstrap the cluster on a node
-- **talos_upgrade**: Upgrade Talos on a node
-- **talos_reset**: Reset a node to maintenance mode
-- **talos_reboot**: Reboot a node
-- **talos_shutdown**: Shutdown a node
-- **talos_cluster_show**: High-level cluster overview
+Install the wheel, matching talosctl, and Talos credentials on the jump host before connecting. Use an SSH config with a verified host key. A Teleport user can generate a separate OpenSSH config with tsh config > /path/to/ssh_config. Inspect that file and use its ProxyCommand, identity, and known-hosts settings. Keep the file outside a public repository.
 
-### Configuration & Management
+~~~sh
+SSH_CONFIG=/path/to/ssh_config
+SSH_TARGET=talos-jump
+REMOTE_SERVER=/opt/talos-mcp/venv/bin/talos-mcp-server
+REMOTE_TALOSCTL=/opt/talos-mcp/talosctl/v1.14.1/talosctl
+REMOTE_READER_CONFIG=/var/lib/talos-mcp/reader-talosconfig
+READ_TOOLS=talos_version,talos_health,talos_service,talos_logs,talos_dmesg,talos_events,talos_get,talos_config_info
 
-- **talos_config_info**: Get current Talos configuration and context
-- **talos_apply_config** / **talos_apply**: Apply configuration
-- **talos_patch**: Apply generic patches to resources
-- **talos_machineconfig_patch**: Patch machine configuration
-- **talos_validate_config**: Validate configuration files
-- **talos_get_kubeconfig**: Retrieve kubeconfig
+codex mcp add talos-remote -- ssh -F "$SSH_CONFIG" -T -o BatchMode=yes -o StrictHostKeyChecking=yes "$SSH_TARGET" "$REMOTE_SERVER" --profile readonly --talosctl "$REMOTE_TALOSCTL" --talosconfig "$REMOTE_READER_CONFIG" --allow-tools "$READ_TOOLS"
+claude mcp add -s local talos-remote -- ssh -F "$SSH_CONFIG" -T -o BatchMode=yes -o StrictHostKeyChecking=yes "$SSH_TARGET" "$REMOTE_SERVER" --profile readonly --talosctl "$REMOTE_TALOSCTL" --talosconfig "$REMOTE_READER_CONFIG" --allow-tools "$READ_TOOLS"
+~~~
 
-### System & Hardware
+The remote command must print only MCP messages to stdout. SSH banners and remote shell output break stdio. A returned artifact path is on the jump host. Copy it with a separate reviewed scp or SFTP action. SSH connection does not install packages or alter the host.
 
-- **talos_get_version**: Get Talos Linux version
-- **talos_health**: Check cluster health status
-- **talos_get_disks**: List disks
-- **talos_devices**: List PCI, USB, and System devices
-- **talos_mounts**: List mount points
-- **talos_du**: Disk usage analysis
-- **talos_dashboard**: Real-time resource usage snapshot
+## Artifacts and lifecycle
 
-### Network & Services
+Use --artifact-root for reviewed input files and generated outputs. Input paths are relative to that root. The server rejects traversal, links, reparse points, overwrites, and unsafe permissions. It creates unique output directories. POSIX uses private 0700 directories and 0600 files. Windows requires a private ACL for the current account. An artifact response gives its path, size, SHA-256, and server locality. Ready artifacts have no automatic expiry.
 
-- **talos_get_services**: Service status
-- **talos_interfaces**: List network interfaces
-- **talos_routes**: List network routes
-- **talos_netstat**: Network connections
-- **talos_pcap**: Capture packet data
-- **talos_logs**: Service/Container logs
-- **talos_dmesg**: Kernel logs
+Generation and validation work offline. talos_support requires an explicit encryption choice. On Talos 1.13, only none is qualified. Talos 1.14 supports none, siderolabs, and explicit recipients. The siderolabs mode does not give the operator a decryption key.
 
-### Resources & Etcd
-
-- **talos_get_resources**: Query any Talos resource
-- **talos_list**: List files
-- **talos_read**: Read files
-- **talos_etcd_members**: List etcd members
-- **talos_etcd_snapshot**: Take etcd snapshot
-- **talos_etcd_alarm**: Manage etcd alarms
-- **talos_etcd_defrag**: Defragment etcd storage
-
-### New Features (Talos 1.12+)
-
-- **talos_cgroups**: Manage cgroups
-- **talos_volumes**: Manage user volumes
-- **talos_support**: Generate support bundles
-
-## Usage Examples
-
-### With Claude Desktop
-
-Once configured, you can ask Claude natural language questions:
-
-```
-"Show me the version of Talos running on my cluster"
-
-"What services are running on node 192.168.1.10?"
-
-"Get the logs from kubelet on my control plane nodes"
-
-"List all disks on 192.168.1.10"
-
-"Check the health of my Talos cluster"
-
-"Show me the etcd members"
-```
-
-### Programmatic Usage
-
-```python
-from talos_mcp.server import TalosClient
-
-# Initialize client
-client = TalosClient()
-
-# Get context info
-info = client.get_context_info()
-print(info)
-
-# Execute talosctl commands
-result = await client.execute_talosctl(["version"])
-print(result["stdout"])
-```
-
-## Development
-
-### Running Tests
-
-```bash
-# Install dev dependencies
-uv pip install -e ".[dev]"
-
-# Run unit tests
-pytest
-
-# Run integration tests (Requires Docker)
-# This will provision a local Talos cluster in Docker
-make test-integration
-```
-
-### Code Quality
-
-We use a comprehensive set of tools to ensure code quality:
-
-```bash
-# Standard development workflow using Makefile
-make install      # Install dependencies
-make lint         # Run all linters (ruff, mypy, bandit)
-make test         # Run tests
-make verify       # Verify tool registration
-```
-
-### Logging and Auditing
-
-The server uses `loguru` for structured logging.
-- **Console**: INFO level logs for general feedback.
-- **Audit Log**: `talos_mcp_audit.log` (rotating) containing detailed JSON logs for debugging and auditing commands.
-
-
-## Architecture
-
-```
-┌─────────────────┐
-│  Claude Desktop │
-└────────┬────────┘
-         │ MCP Protocol
-         ↓
-┌─────────────────────────────────────┐
-│  MCP Server (Python)                │
-│  ├─ cli.py (CLI & Lifecycle)        │
-│  ├─ handlers.py (Protocol Handlers) │
-│  ├─ registry.py (Auto-Discovery)    │
-│  └─ server.py (Initialization)      │
-└────────┬────────────────────────────┘
-         │ subprocess
-         ↓
-┌─────────────────┐
-│   talosctl CLI  │
-└────────┬────────┘
-         │ gRPC + mTLS
-         ↓
-┌─────────────────┐
-│  Talos Cluster  │
-│   (apid API)    │
-└─────────────────┘
-```
+Each lifecycle call targets one explicit node. Apply and patch require mode=auto|no-reboot|staged|try. Reset requires explicit wipe labels from STATE and EPHEMERAL. Upgrade requires an explicit target version and digest-pinned image. It uses native --wait=true --drain=true and a bounded default deadline of 600 seconds. The host that runs this server must reach the Kubernetes API for drain.
 
-### Key Components
+A zero exit from reboot, shutdown, reset, or upgrade means the command was accepted. It does not prove that the node returned or that the cluster is healthy. If a child stops after dispatch or reaches its deadline, the result is OUTCOME_UNKNOWN. Do not retry automatically. Read back the node, Kubernetes readiness, cordon state, and cluster health before the operator acts. A timed-out drain can leave the node Ready but cordoned, with workloads pending. The server does not uncordon or roll back.
 
-- **cli.py**: Command-line interface, logging, and server lifecycle
-- **server.py**: MCP server initialization and handler registration
-- **handlers.py**: MCP protocol handlers (Resources, Prompts, Tools)
-- **registry.py**: Auto-discovery and registration of tools
-- **core/**: Client, settings, and exception handling
-- **tools/**: Modular tool implementations (auto-discovered)
+Use Talos 1.13 or 1.14 for qualified writes. Talos 1.12 has only transitional version, health, and safe-get diagnostics. A version mismatch can permit diagnostic reads with a warning. Authenticated writes and artifact or sensitive reads require the talosctl minor to match the node minor. For example, the pinned 1.14 CLI cannot run these operations against a 1.13 node. Offline config generation does not contact a node. After a 1.13 to 1.14 upgrade, restart the server with a pinned 1.14 CLI before further writes.
 
-## Security Considerations
+## Docker, Ansible, and qualification
 
-1. **mTLS Authentication**: Talos API uses mutual TLS for authentication
-2. **Certificate Management**: Keep your talosconfig and certificates secure
-3. **Network Access**: Ensure your endpoints are properly firewalled
-4. **Permissions**: The MCP server has the same permissions as your talosconfig
+The Dockerfile reads .talosctl-version and verifies the matching amd64 or arm64 asset against talosctl-checksums.txt during build. It keeps audit logging off by default. Build an architecture explicitly:
 
-## Troubleshooting
+~~~sh
+docker buildx build --platform linux/amd64 -t talos-mcp-server:v0.4.0-amd64 --load .
+docker run --rm -i --mount type=bind,src=/path/to/reader-talosconfig,dst=/run/talosconfig,readonly -e TALOS_MCP_TALOSCONFIG=/run/talosconfig talos-mcp-server:v0.4.0-amd64
+~~~
 
-### talosctl not found
+examples/ansible contains an idempotent, pinned installation example. It installs a reviewed wheelhouse and talosctl under a dedicated account. It does not copy credentials or connect client products.
 
-```bash
-# Check if talosctl is in PATH
-which talosctl
-
-# Install talosctl if missing
-curl -sL https://talos.dev/install | sh
-```
-
-### Configuration not found
-
-```bash
-# Check config location
-echo $TALOSCONFIG
-
-# Verify config exists
-ls -la ~/.talos/config
-
-# Test connectivity
-talosctl version
-```
-
-### Connection refused
-
-```bash
-# Verify endpoints in config
-talosctl config info
-
-# Check network connectivity
-ping <control-plane-ip>
-
-# Verify certificates are valid
-talosctl version --nodes <node-ip>
-```
-
-### MCP Server Issues
-
-```bash
-# Test the server directly
-talos-mcp-server --help
-
-# Check Claude Desktop logs
-# macOS: ~/Library/Logs/Claude/
-# Windows: %APPDATA%\Claude\logs\
-```
-
-## Resources
-
-- [Talos Linux Documentation](https://www.talos.dev/)
-- [Talos GitHub Repository](https://github.com/siderolabs/talos)
-- [MCP Protocol Documentation](https://modelcontextprotocol.io/)
-- [talosctl CLI Reference](https://www.talos.dev/latest/reference/cli/)
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-MIT License - see LICENSE file for details
-
-## Acknowledgments
-
-- Built for the [Model Context Protocol](https://modelcontextprotocol.io/)
-- Integrates with [Talos Linux](https://www.talos.dev/) by Sidero Labs
-- Uses [uv](https://github.com/astral-sh/uv) for fast Python package management
+Run make install, make lint, and make test for source checks. tests/wheel_stdio_smoke.py builds a clean install and exercises real MCP stdio with an official checksum-verified CLI. CI runs it on Linux, macOS, and Windows. The Talos 1.13.5, 1.13.10, and 1.14.1 CLI fixtures test offline behavior. A 1.12.1 CLI fixture tests transitional client-only behavior. These checks do not prove live cluster behavior. Live lifecycle qualification requires a separate disposable Talos VM, one explicit node, and independent readbacks. make test-integration LAB_MANIFEST=/path/to/manifest.json LAB_NODE=the-disposable-node runs one reviewed operation; the external lab owner provisions and reaps the VM.

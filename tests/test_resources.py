@@ -1,127 +1,45 @@
-"""Tests for resources module."""
+"""Resource reads must share the enabled canonical operation boundary."""
 
-from unittest.mock import AsyncMock, Mock
+import stat
+import sys
+from pathlib import Path
 
 import pytest
 from pydantic import AnyUrl
 
 from talos_mcp.core.client import TalosClient
-from talos_mcp.core.exceptions import TalosCommandError
 from talos_mcp.resources import TalosResources
 
 
-@pytest.fixture
-def mock_client() -> Mock:
-    """Create a mock TalosClient."""
-    client = Mock(spec=TalosClient)
-    client.execute_talosctl = AsyncMock()
-    client.get_context_info = Mock(return_value={"context": "test", "endpoints": ["10.0.0.1"]})
-    return client
+@pytest.mark.asyncio
+async def test_version_resource_uses_pinned_context_and_binary(tmp_path: Path) -> None:
+    binary = tmp_path / "talosctl"
+    binary.write_text(f"#!{sys.executable}\nimport sys\nprint(' '.join(sys.argv[1:]))\n")
+    binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
+    config = tmp_path / "talosconfig"
+    config.write_text("context: lab\ncontexts:\n  lab:\n    nodes: [node]\n")
+    resources = TalosResources(TalosClient(str(config), profile="readonly", talosctl=str(binary)))
+    result = await resources.read_resource(AnyUrl("talos://node/version"))
+    assert result.startswith("version -n node")
+    assert f"--talosconfig {config}" in result
+    assert "--context lab" in result
+    port_result = await resources.read_resource(AnyUrl("talos://127.0.0.1:50001/version"))
+    assert port_result.startswith("version -n 127.0.0.1:50001")
 
 
-@pytest.fixture
-def resources(mock_client: Mock) -> TalosResources:
-    """Create TalosResources instance with mocked client."""
-    return TalosResources(mock_client)
+@pytest.mark.asyncio
+async def test_config_resource_contains_no_config_body(tmp_path: Path) -> None:
+    config = tmp_path / "talosconfig"
+    config.write_text("context: lab\ncontexts:\n  lab:\n    crt: SENTINEL_SECRET\n")
+    resources = TalosResources(TalosClient(str(config), profile="readonly"))
+    result = await resources.read_resource(AnyUrl("talos://node/config"))
+    assert "lab" in result
+    assert "SENTINEL_SECRET" not in result
 
 
-class TestTalosResources:
-    """Tests for TalosResources class."""
-
-    async def test_list_resources_empty(self, resources: TalosResources) -> None:
-        """Test list_resources returns empty list (dynamic resources use templates)."""
-        result = await resources.list_resources()
-        assert result == []
-
-    async def test_list_resource_templates(self, resources: TalosResources) -> None:
-        """Test list_resource_templates returns expected templates."""
-        result = await resources.list_resource_templates()
-        assert len(result) == 3
-
-        uris = [t.uriTemplate for t in result]
-        assert "talos://{node}/health" in uris
-        assert "talos://{node}/version" in uris
-        assert "talos://{node}/config" in uris
-
-    async def test_list_resource_templates_have_names(self, resources: TalosResources) -> None:
-        """Test resource templates have proper names."""
-        result = await resources.list_resource_templates()
-        names = [t.name for t in result]
-        assert "Node Health" in names
-        assert "Node Version" in names
-        assert "Node Config Context" in names
-
-
-class TestReadResource:
-    """Tests for read_resource method."""
-
-    async def test_read_resource_health(self, resources: TalosResources, mock_client: Mock) -> None:
-        """Test reading health resource."""
-        mock_client.execute_talosctl.return_value = {"stdout": "OK", "stderr": ""}
-
-        uri = AnyUrl("talos://10.0.0.1/health")
-        result = await resources.read_resource(uri)
-
-        assert result == "OK"
-        mock_client.execute_talosctl.assert_called_once()
-        call_args = mock_client.execute_talosctl.call_args[0][0]
-        assert "health" in call_args
-        assert "--nodes" in call_args
-        assert "10.0.0.1" in call_args
-
-    async def test_read_resource_version(
-        self, resources: TalosResources, mock_client: Mock
-    ) -> None:
-        """Test reading version resource."""
-        mock_client.execute_talosctl.return_value = {"stdout": "v1.12.0", "stderr": ""}
-
-        uri = AnyUrl("talos://10.0.0.1/version")
-        result = await resources.read_resource(uri)
-
-        assert "v1.12.0" in result
-
-    async def test_read_resource_config(self, resources: TalosResources, mock_client: Mock) -> None:
-        """Test reading config resource."""
-        uri = AnyUrl("talos://10.0.0.1/config")
-        result = await resources.read_resource(uri)
-
-        assert "context" in result
-        assert "test" in result
-
-    async def test_read_resource_unsupported_scheme(self, resources: TalosResources) -> None:
-        """Test reading resource with unsupported scheme raises."""
-        uri = AnyUrl("http://10.0.0.1/health")
-        with pytest.raises(ValueError, match="Unsupported scheme"):
-            await resources.read_resource(uri)
-
-    async def test_read_resource_unknown_type(self, resources: TalosResources) -> None:
-        """Test reading unknown resource type raises."""
-        uri = AnyUrl("talos://10.0.0.1/unknown")
-        with pytest.raises(ValueError, match="Unknown resource type"):
-            await resources.read_resource(uri)
-
-    async def test_read_resource_health_error(
-        self, resources: TalosResources, mock_client: Mock
-    ) -> None:
-        """Test reading health with TalosCommandError returns error message."""
-        mock_client.execute_talosctl.side_effect = TalosCommandError(
-            1, "health", "connection refused"
-        )
-
-        uri = AnyUrl("talos://10.0.0.1/health")
-        result = await resources.read_resource(uri)
-
-        assert "Error" in result
-        assert "connection refused" in result
-
-    async def test_read_resource_version_generic_error(
-        self, resources: TalosResources, mock_client: Mock
-    ) -> None:
-        """Test reading version with generic exception returns error message."""
-        mock_client.execute_talosctl.side_effect = Exception("Network error")
-
-        uri = AnyUrl("talos://10.0.0.1/version")
-        result = await resources.read_resource(uri)
-
-        assert "Error" in result
-        assert "Network error" in result
+@pytest.mark.asyncio
+async def test_invalid_resource_uri_is_rejected() -> None:
+    resources = TalosResources(TalosClient(profile="readonly"))
+    for uri in ("http://node/version", "talos://node/unknown", "talos://node/config/extra"):
+        with pytest.raises(ValueError):
+            await resources.read_resource(AnyUrl(uri))

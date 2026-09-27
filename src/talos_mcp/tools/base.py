@@ -3,12 +3,17 @@
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from mcp.types import TextContent, Tool
-from pydantic import BaseModel
+from mcp.types import CallToolResult, TextContent, Tool, ToolAnnotations
+from pydantic import BaseModel, ConfigDict
 
-from talos_mcp.core.cache import get_cache
 from talos_mcp.core.client import TalosClient
-from talos_mcp.core.exceptions import TalosCommandError
+from talos_mcp.core.policy import OPERATIONS
+
+
+class StrictSchema(BaseModel):
+    """Forbid unknown MCP arguments at the protocol boundary."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
 
 
 class TalosTool(ABC):
@@ -37,10 +42,24 @@ class TalosTool(ABC):
             name=self.name,
             description=self.description,
             inputSchema=self.args_schema.model_json_schema(),
+            annotations=ToolAnnotations(
+                readOnlyHint=OPERATIONS[self.name].kind == "READ",
+                destructiveHint=self.name
+                in {
+                    "talos_apply_config",
+                    "talos_machineconfig_patch",
+                    "talos_reboot",
+                    "talos_shutdown",
+                    "talos_reset",
+                    "talos_upgrade",
+                },
+                idempotentHint=OPERATIONS[self.name].kind == "READ",
+                openWorldHint=OPERATIONS[self.name].authenticated,
+            ),
         )
 
     @abstractmethod
-    async def run(self, arguments: dict[str, Any]) -> list[TextContent]:
+    async def run(self, arguments: dict[str, Any]) -> list[TextContent] | CallToolResult:
         """Run the tool.
 
         Args:
@@ -51,29 +70,28 @@ class TalosTool(ABC):
         """
         pass
 
-    async def execute_talosctl(self, args: list[str]) -> list[TextContent]:
+    async def execute_talosctl(
+        self, args: list[str], *, target_version: str | None = None
+    ) -> list[TextContent]:
         """Helper to execute talosctl and return TextContent.
 
         Args:
             args: Arguments for talosctl.
+            target_version: Declared target version for version-gated writes.
 
         Returns:
             Formatted TextContent.
         """
         try:
-            result = await self.client.execute_talosctl(args)
+            result = await self.client.execute_talosctl(
+                args, operation=self.name, target_version=target_version
+            )
             output = result["stdout"]
-            if result.get("stderr"):
-                if output:
-                    output += "\n\n"
-                output += result["stderr"]
+            if result.get("warning"):
+                output = f"{result['warning']}\n{output}"
             return [TextContent(type="text", text=f"```\n{output}\n```")]
-        except TalosCommandError as e:
-            # Use user-friendly message with technical details
-            user_msg = e.get_user_message()
-            return [TextContent(type="text", text=f"Error executing {self.name}:\n{user_msg}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"Error executing {self.name}:\n{e!s}")]
+        except Exception:
+            raise
 
     def ensure_nodes(self, nodes: str | None) -> str:
         """Helper to ensure nodes are set, defaulting to all cluster nodes if None.
@@ -91,14 +109,7 @@ class TalosTool(ABC):
 
 
 class CachedTool(TalosTool):
-    """Base class for tools that support result caching.
-
-    Cached tools store their results for a configurable TTL to avoid
-    repeated expensive operations. This is suitable for read-only tools
-    that return stable data (like version, health, stats).
-
-    Subclasses should override `cache_ttl` to set the desired TTL.
-    """
+    """Compatibility base for existing read tools; responses are never cached."""
 
     cache_ttl: ClassVar[float] = 30.0  # Default TTL: 30 seconds
 
@@ -111,27 +122,7 @@ class CachedTool(TalosTool):
         Returns:
             List of TextContent results (possibly cached).
         """
-        cache = get_cache()
-
-        # Try to get from cache
-        cached_result = await cache.get(self.name, arguments, self.cache_ttl)
-        if cached_result is not None:
-            return cached_result
-
-        # Execute and cache
-        result = await self._run_impl(arguments)
-
-        # Don't cache error results
-        should_cache = True
-        if result and isinstance(result[0], TextContent):
-            text = result[0].text
-            if text.startswith("Error") or "failed" in text.lower():
-                should_cache = False
-
-        if should_cache:
-            await cache.set(self.name, arguments, result)
-
-        return result
+        return await self._run_impl(arguments)
 
     @abstractmethod
     async def _run_impl(self, arguments: dict[str, Any]) -> list[TextContent]:
@@ -147,11 +138,7 @@ class CachedTool(TalosTool):
 
 
 class MutatingTool(TalosTool):
-    """Base class for tools that modify state.
-
-    Mutating tools automatically invalidate the cache after successful
-    execution to ensure read-only tools return fresh data.
-    """
+    """Compatibility base for existing write tools; execution is serialized by client."""
 
     is_mutation: ClassVar[bool] = True
 
@@ -164,14 +151,7 @@ class MutatingTool(TalosTool):
         Returns:
             List of TextContent results.
         """
-        # Execute the tool
-        result = await self._run_impl(arguments)
-
-        # Invalidate cache after mutation
-        cache = get_cache()
-        await cache.invalidate_all()
-
-        return result
+        return await self._run_impl(arguments)
 
     @abstractmethod
     async def _run_impl(self, arguments: dict[str, Any]) -> list[TextContent]:
