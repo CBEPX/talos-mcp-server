@@ -12,6 +12,14 @@ uv run --no-project --with "mcp>=1.30,<2" --with pyyaml python tests/wheel_stdio
 
 The wheel smoke creates a clean environment and downloads an official talosctl asset. It compares the asset with talosctl-checksums.txt. The smoke then uses real MCP stdio to initialize, list, call, read a resource, fetch a prompt, generate private files, and validate a generated file. Each platform checks native child cleanup after cancellation and EOF. Windows also rejects a broad ACL.
 
+Check diagnostic warning propagation with synthetic native binaries and real MCP stdio:
+
+~~~sh
+uv run --locked pytest tests/test_runtime_contract.py tests/test_stdio_contract.py -k "diagnostic and skew"
+~~~
+
+The regressions check version and health resources and the events tool. Matching-version controls check that ordinary diagnostic text remains unchanged. These tests do not use live credentials or a Talos node.
+
 The live runner requires an operator-owned disposable VM. Create a private JSON manifest with absolute paths and an exact node. The manifest must name its owner. Do not store credentials or private addresses in this repository.
 
 ~~~json

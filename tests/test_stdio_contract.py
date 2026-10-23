@@ -107,6 +107,62 @@ def test_opt_in_audit_contains_only_metadata(tmp_path: Path) -> None:
     )
 
 
+def test_stdio_preserves_diagnostic_version_skew_warnings(tmp_path: Path) -> None:
+    """MCP consumers receive skew warnings in version/health resources and events."""
+    binary = tmp_path / "talosctl"
+    binary.write_text(
+        f"#!{sys.executable}\n"
+        "import sys,time\n"
+        "if sys.argv[1]=='version':\n"
+        " print('Client:\\n  Tag: v1.13.10\\nServer:\\n  Tag: v1.14.1')\n"
+        "else:\n"
+        " print('diagnostic output',flush=True)\n"
+        " if sys.argv[1]=='events': time.sleep(30)\n"
+    )
+    binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
+    config = tmp_path / "talosconfig"
+    config.write_text("context: lab\ncontexts:\n  lab:\n    nodes: [node]\n")
+
+    async def check() -> None:
+        env = {
+            "PATH": os.environ.get("PATH", ""),
+            "HOME": str(tmp_path),
+            "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
+        }
+        server = StdioServerParameters(
+            command=sys.executable,
+            args=[
+                "-m",
+                "talos_mcp.server",
+                "--profile",
+                "readonly",
+                "--allow-tools",
+                "talos_version,talos_health,talos_events",
+                "--talosctl",
+                str(binary),
+                "--talosconfig",
+                str(config),
+                "--skip-health-check",
+            ],
+            env=env,
+            cwd=tmp_path,
+        )
+        with anyio.fail_after(15):
+            async with stdio_client(server) as (read, write), ClientSession(read, write) as session:
+                await session.initialize()
+                for kind in ("version", "health"):
+                    resource = await session.read_resource(AnyUrl(f"talos://node/{kind}"))
+                    assert "Version skew: client 1.13, node 1.14" in resource.contents[0].text
+                events = await session.call_tool(
+                    "talos_events", {"nodes": "node", "tail": 1, "window_seconds": 1}
+                )
+                assert events.isError is False
+                assert "Version skew: client 1.13, node 1.14" in events.content[0].text
+                assert "diagnostic output" in events.content[0].text
+
+    anyio.run(check)
+
+
 @pytest.mark.skipif(os.name != "posix", reason="POSIX process group EOF regression")
 @pytest.mark.parametrize("mode", ["eof", "notification"])
 # Keep the transport, cancellation, and child-readback in one lifecycle check.

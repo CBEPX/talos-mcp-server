@@ -100,6 +100,8 @@ A zero exit from reboot, shutdown, reset, or upgrade means the command was accep
 
 Use Talos 1.13 or 1.14 for qualified writes. Talos 1.12 has only transitional version, health, and safe-get diagnostics. A version mismatch can permit diagnostic reads with a warning. Authenticated writes and artifact or sensitive reads require the talosctl minor to match the node minor. For example, the pinned 1.14 CLI cannot run these operations against a 1.13 node. Offline config generation does not contact a node. After a 1.13 to 1.14 upgrade, restart the server with a pinned 1.14 CLI before further writes.
 
+Version and health resources and the events tool include version-skew warnings before the diagnostic text. Matching versions do not add a warning. Event responses retain their observation-window metadata.
+
 ## Docker, Ansible, and qualification
 
 The Dockerfile reads .talosctl-version and verifies the matching amd64 or arm64 asset against talosctl-checksums.txt during build. It keeps audit logging off by default. Build an architecture explicitly:

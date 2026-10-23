@@ -127,8 +127,11 @@ class EventsTool(TalosTool):
         result = await self.client.execute_talosctl(
             cmd, operation=self.name, observation_window=args.window_seconds
         )
+        output = result["stdout"]
+        if result.get("warning"):
+            output = f"{result['warning']}\n{output}"
         return CallToolResult(
-            content=[TextContent(type="text", text=result["stdout"])],
+            content=[TextContent(type="text", text=output)],
             isError=False,
             structuredContent={
                 "code": "OK",

@@ -57,4 +57,7 @@ class TalosResources:
         if kind == "health":
             command.extend(["--wait-timeout", f"{max(1, int(self.client.timeout * 0.75))}s"])
         result = await self.client.execute_talosctl(command, operation=tool)
-        return cast("str", result["stdout"])
+        output = cast("str", result["stdout"])
+        if result.get("warning"):
+            output = f"{result['warning']}\n{output}"
+        return output

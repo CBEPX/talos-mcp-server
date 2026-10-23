@@ -21,3 +21,13 @@ Candidate CI container manifest digests (run 36343968208; local CI images, not r
 
 - `amd64`: `sha256:1b4ccee2406542a950c3fdb9316f6dbda5b47d2958d15a54fb028c28fee4371c`.
 - `arm64`: `sha256:a6d0950a47e3ec3041983736549c733b237fa0e706fc8b69fa5148a01c25cdc2`.
+
+## Diagnostic warning follow-up (unreleased)
+
+[Issue 7](https://github.com/CBEPX/talos-mcp-server/issues/7) preserves version-skew warnings in the version resource, health resource, and events tool. Native-fixture regressions include matching-version controls. A real MCP stdio regression checks consumer-visible warnings. This follow-up changes response text only. It does not change operation policy, dependencies, event-window metadata, or credentials.
+
+The 0.4.0 release evidence above belongs to that release.
+
+Local macOS Python 3.12 checks passed: uv lock, Ruff, MyPy, Black, and 113 tests. The Windows native ACL test was skipped. Installed-wheel stdio checks passed with the minimum and current MCP SDK ranges. Independent Claude source review found no blocking issue. Its reviewer did not execute tests.
+
+Release, installation, full platform CI, and deployed qualification are separate stages.
