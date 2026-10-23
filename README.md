@@ -21,7 +21,7 @@ The server can start without a Talos configuration file. In that state, talos_co
 
 ## Dependency maintenance (unreleased)
 
-The repository lock updates 11 packages for the 41 advisories reviewed in [dependency triage](docs/security/dependency-triage-20261024.md). Python 3.10 and MCP 1.x support remain in scope. This source change does not update an existing installed environment. Release and installation require separate qualification.
+The repository lock includes security updates for the 41 advisories in the [initial triage](docs/security/dependency-triage-20261024.md) and two additional advisories in the [dependency graph follow-up](docs/security/dependency-followup-20261024.md). Python 3.10 and MCP 1.x support remain in scope. This source change does not update an existing installed environment. Release and installation require separate qualification.
 
 ## Profiles and tools
 
