@@ -1135,6 +1135,50 @@ async def test_version_skew_warning_parses_native_full_output(tmp_path: Path) ->
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("surface", ["version", "health", "events"])
+@pytest.mark.parametrize("node_version, warning_expected", [("1.14.1", True), ("1.13.10", False)])
+async def test_diagnostic_responses_preserve_version_skew_warning(
+    tmp_path: Path, surface: str, node_version: str, warning_expected: bool
+) -> None:
+    """Resource and event consumers receive native version warnings and output."""
+    binary = tmp_path / "talosctl"
+    binary.write_text(
+        f"#!{sys.executable}\n"
+        "import sys,time\n"
+        "if sys.argv[1]=='version':\n"
+        f" print('Client:\\n  Tag: v1.13.10\\nServer:\\n  Tag: v{node_version}')\n"
+        "else:\n"
+        " print('diagnostic output',flush=True)\n"
+        " if sys.argv[1]=='events': time.sleep(30)\n"
+    )
+    binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
+    config = tmp_path / "talosconfig"
+    config.write_text("context: lab\ncontexts:\n  lab:\n    nodes: [node]\n")
+    client = TalosClient(str(config), profile="readonly", talosctl=str(binary))
+    catalog, tool_map = create_tool_registry(client)
+    handlers = MCPHandlers(TalosPrompts(client), TalosResources(client), catalog, tool_map)
+    try:
+        if surface == "events":
+            result = await handlers.call_tool(
+                "talos_events", {"nodes": "node", "tail": 1, "window_seconds": 1}
+            )
+            assert result.isError is False
+            assert result.structuredContent["complete_window"] is True
+            assert result.structuredContent["content"][0]["text"] == result.content[0].text
+            text = result.content[0].text
+        else:
+            text = await handlers.read_resource(AnyUrl(f"talos://node/{surface}"))
+            assert isinstance(text, str)
+        assert ("Version skew: client 1.13, node 1.14; diagnostic only" in text) is warning_expected
+        if surface != "version":
+            assert text.endswith("diagnostic output")
+            if not warning_expected:
+                assert text == "diagnostic output"
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
 async def test_health_native_wait_is_below_process_deadline(tmp_path: Path) -> None:
     handlers = fixture_handlers(tmp_path, "readonly")
     result = await handlers.call_tool("talos_health", {"nodes": "node"})
