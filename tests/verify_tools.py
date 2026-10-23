@@ -4,12 +4,10 @@ import asyncio
 import logging
 import sys
 
-
 # Add src to path
 sys.path.append("src")
 
 from talos_mcp.server import list_tools
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("verify_tools")

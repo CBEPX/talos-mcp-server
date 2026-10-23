@@ -8,7 +8,6 @@ from pydantic import AnyUrl
 
 from talos_mcp.core.client import TalosClient, TalosExecutionError
 
-
 RESOURCE_TO_TOOL = {
     "version": "talos_version",
     "health": "talos_health",

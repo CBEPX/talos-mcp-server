@@ -19,6 +19,10 @@ The package version is static metadata. A source checkout needs an editable inst
 
 The server can start without a Talos configuration file. In that state, talos_config_info, offline validation, and talos_version with client_only=true work. Authenticated node tools return CONFIG_REQUIRED. Set --talosconfig and, if needed, --context for cluster calls. The CLI uses that context for the server lifetime and passes it to each authenticated child.
 
+## Dependency maintenance (unreleased)
+
+The repository lock updates 11 packages for the 41 advisories reviewed in [dependency triage](docs/security/dependency-triage-20261024.md). Python 3.10 and MCP 1.x support remain in scope. This source change does not update an existing installed environment. Release and installation require separate qualification.
+
 ## Profiles and tools
 
 The default readonly profile exposes diagnostic tools only. --profile write exposes all qualified canonical tools unless --allow-tools narrows the catalog. The comma-separated allowlist accepts exact canonical names. Unknown names, wildcards, aliases, and write tools in a readonly list stop startup. A Talos credential does not override the server profile or allowlist.
