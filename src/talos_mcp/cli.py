@@ -13,7 +13,6 @@ from mcp.server.stdio import stdio_server
 from talos_mcp import __version__
 from talos_mcp.core.client import TalosClient
 
-
 if TYPE_CHECKING:
     from mcp.server import Server
 

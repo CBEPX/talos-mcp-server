@@ -143,7 +143,6 @@ ignore = [
 
 [tool.ruff.lint.isort]
 force-single-line = false
-lines-after-imports = 2
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

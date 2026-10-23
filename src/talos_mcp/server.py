@@ -61,6 +61,5 @@ def create_server(client: TalosClient) -> Server:
 # Preserve the historical python -m entry point without creating runtime globals.
 from talos_mcp.cli import cli  # noqa: E402
 
-
 if __name__ == "__main__":
     cli()

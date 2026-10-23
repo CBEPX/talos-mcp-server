@@ -28,7 +28,6 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from pydantic import AnyUrl
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

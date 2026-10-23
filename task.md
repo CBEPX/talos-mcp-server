@@ -31,3 +31,9 @@ The 0.4.0 release evidence above belongs to that release.
 Local macOS Python 3.12 checks passed: uv lock, Ruff, MyPy, Black, and 113 tests. The Windows native ACL test was skipped. Installed-wheel stdio checks passed with the minimum and current MCP SDK ranges. Independent Claude source review found no blocking issue. Its reviewer did not execute tests.
 
 Release, installation, full platform CI, and deployed qualification are separate stages.
+
+## Dependency hardening follow-up (unreleased)
+
+[Issue 9](https://github.com/CBEPX/talos-mcp-server/issues/9) updates the lock for 41 advisories across 11 packages. The [triage record](docs/security/dependency-triage-20261024.md) lists each affected range, precondition, application path and selected fix. No alert was dismissed.
+
+Local lock, Ruff, MyPy, Black and full-suite checks passed with 113 tests and one Windows-only skip. Installed-wheel stdio passed on Python 3.10 and 3.12 with locked dependencies, and on Python 3.12 with current resolution. Native cancellation and EOF cleanup passed. Independent Claude source review approved the source candidate without blocking findings. The reviewer did not execute tests or recheck all GHSA ranges. Platform CI is pending at this checkpoint. The 0.4.0 release evidence above does not qualify this dependency update. Release, deployment and installed-client checks remain separate.

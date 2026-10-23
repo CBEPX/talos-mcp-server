@@ -20,6 +20,19 @@ uv run --locked pytest tests/test_runtime_contract.py tests/test_stdio_contract.
 
 The regressions check version and health resources and the events tool. Matching-version controls check that ordinary diagnostic text remains unchanged. These tests do not use live credentials or a Talos node.
 
+For the dependency hardening candidate, export the locked runtime versions before the installed-wheel smoke:
+
+~~~sh
+TASK_WORK=dist/dependency-qualification
+PYTHON=3.10
+mkdir -p "$TASK_WORK"
+uv export --locked --no-dev --no-emit-project --no-hashes --output-file "$TASK_WORK/runtime-constraints.txt"
+UV_CONSTRAINT="$PWD/$TASK_WORK/runtime-constraints.txt" uv run --no-project --python "$PYTHON" --with "mcp>=1.30,<2" --with pyyaml python tests/wheel_stdio_smoke.py --wheel dist --sdk current
+uv run --no-project --python "$PYTHON" --with "mcp>=1.30,<2" --with pyyaml python tests/wheel_stdio_smoke.py --wheel dist --sdk current
+~~~
+
+Keep temporary constraints and raw receipts in the task-owned execution directory. Record the resolved package versions with the wheel digest. Current resolution can differ from the repository lock. Set PYTHON for each available interpreter. The existing CI matrix checks Python 3.10 through 3.14 on all three operating systems, with minimum/current SDK resolution. See the [advisory decisions](docs/security/dependency-triage-20261024.md) for scope and limits.
+
 The live runner requires an operator-owned disposable VM. Create a private JSON manifest with absolute paths and an exact node. The manifest must name its owner. Do not store credentials or private addresses in this repository.
 
 ~~~json
