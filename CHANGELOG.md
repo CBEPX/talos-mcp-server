@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-24
+
+### Fixed
+
+- Version and health resources and the events tool preserve diagnostic version-skew warnings. Matching versions keep their existing diagnostic text.
+
+### Security
+
+- The repository lock updates dependencies for 43 tracked advisories, including certifi 2026.10.19 and Black 26.10.1. No Dependabot alert was dismissed.
+- The lock retains Python 3.10 and MCP 1.x support. Existing environments need a separate dependency update. The wheel metadata does not pin every transitive package.
+
+### Qualification
+
+- Earlier CI qualified the warning and dependency commits with 37 successful jobs. Those commits also passed local source checks, native installed-wheel checks and independent source review. The 0.4.1 metadata change requires its own qualification.
+- Release publication and deployed local/SSH client checks are tracked separately in [issue 13](https://github.com/CBEPX/talos-mcp-server/issues/13).
+
 ## [0.4.0] - 2026-09-27
 
 ### Breaking changes

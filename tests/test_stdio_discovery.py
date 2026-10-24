@@ -133,13 +133,13 @@ def test_installed_wheel_initializes_with_package_version(tmp_path: Path) -> Non
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "talos-mcp-server 0.4.0"
+    assert result.stdout.strip() == "talos-mcp-server 0.4.1"
 
     server = StdioServerParameters(
         command=str(executable), args=["--skip-health-check"], env=env, cwd=tmp_path
     )
     version, tools = anyio.run(_initialize_and_list, server)
 
-    assert version == "0.4.0"
+    assert version == "0.4.1"
     assert len({tool.name for tool in tools}) >= 20
     assert "talos_support" not in {tool.name for tool in tools}

@@ -1,4 +1,14 @@
-# Version 0.4.0 delivery
+# Version 0.4.1 release and installation
+
+[Issue 13](https://github.com/CBEPX/talos-mcp-server/issues/13) tracks publication and the existing read-only local/SSH installation update. The operator authorized both stages on 2026-10-24.
+
+The source includes the diagnostic warning fix and both dependency follow-ups. PR 12 merged as 9a2f350642d8b0fa29084ee6c075b57c07c2700b. Main CI 40044538256 passed 37 jobs. Fresh GitHub readback reports all 43 tracked advisories fixed and zero open alerts. Issue 9 is closed. No alert was dismissed.
+
+This change prepares version 0.4.1 metadata and release documentation. The application runtime and CI workflow remain unchanged from the qualified main commit. Test version assertions and Ansible example pins now match 0.4.1. The release PR, tag publication and deployed-client acceptance remain pending until their exact artifacts and runtime checks pass. Historical 0.4.0 and intermediate-candidate evidence below does not prove those stages.
+
+## Earlier qualification records
+
+## Version 0.4.0 delivery
 
 The release candidate passed qualification on 2026-09-27. The final wheel SHA-256 is `8d2b09680f4180a340dcf1bbf7985d9a7338552030c3ca1c90a63918a59f5d66`.
 
@@ -22,7 +32,7 @@ Candidate CI container manifest digests (run 36343968208; local CI images, not r
 - `amd64`: `sha256:1b4ccee2406542a950c3fdb9316f6dbda5b47d2958d15a54fb028c28fee4371c`.
 - `arm64`: `sha256:a6d0950a47e3ec3041983736549c733b237fa0e706fc8b69fa5148a01c25cdc2`.
 
-## Diagnostic warning follow-up (unreleased)
+### Diagnostic warning follow-up (unreleased)
 
 [Issue 7](https://github.com/CBEPX/talos-mcp-server/issues/7) preserves version-skew warnings in the version resource, health resource, and events tool. Native-fixture regressions include matching-version controls. A real MCP stdio regression checks consumer-visible warnings. This follow-up changes response text only. It does not change operation policy, dependencies, event-window metadata, or credentials.
 
@@ -32,13 +42,13 @@ Local macOS Python 3.12 checks passed: uv lock, Ruff, MyPy, Black, and 113 tests
 
 Release, installation, full platform CI, and deployed qualification are separate stages.
 
-## Dependency hardening follow-up (unreleased)
+### Dependency hardening follow-up (unreleased)
 
 [Issue 9](https://github.com/CBEPX/talos-mcp-server/issues/9) updates the lock for 41 advisories across 11 packages. The [triage record](docs/security/dependency-triage-20261024.md) lists each affected range, precondition, application path and selected fix. No alert was dismissed.
 
 Local lock, Ruff, MyPy, Black and full-suite checks passed with 113 tests and one Windows-only skip. Installed-wheel stdio passed on Python 3.10 and 3.12 with locked dependencies, and on Python 3.12 with current resolution. Native cancellation and EOF cleanup passed. Independent Claude source review approved the source candidate without blocking findings. The reviewer did not execute tests or recheck all GHSA ranges. Platform CI is pending at this checkpoint. The 0.4.0 release evidence above does not qualify this dependency update. Release, deployment and installed-client checks remain separate.
 
-## Dependency graph follow-up (unreleased)
+### Dependency graph follow-up (unreleased)
 
 PR 10 merged as 8f9d5d6f259caa93681e22f9017c30b0035b38c2, and main CI 40038485985 passed 37 jobs. All original 41 alerts became fixed. The refreshed graph also reported critical certifi alert 49 and high Black alert 50. [The follow-up record](docs/security/dependency-followup-20261024.md) documents their preconditions and selected fixes.
 

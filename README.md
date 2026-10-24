@@ -2,7 +2,7 @@
 
 Talos MCP Server runs as a Python stdio server. It calls a pinned talosctl binary. The server does not connect to Talos through a separate Python gRPC client.
 
-Version 0.4.0 is a breaking repair release. Its default profile is readonly. A separate write profile enables standalone operations when the operator supplies suitable Talos credentials. An exact tool allowlist can restrict either profile.
+Version 0.4.1 includes diagnostic warning fixes and dependency maintenance after the 0.4.0 breaking repair release. Its default profile is readonly. A separate write profile enables standalone operations when the operator supplies suitable Talos credentials. An exact tool allowlist can restrict either profile.
 
 ## Install a reviewed build
 
@@ -11,7 +11,7 @@ Use Python 3.10 or newer. Install a talosctl release that matches the Talos mino
 ~~~sh
 uv build --wheel
 python3 -m venv /opt/talos-mcp/venv
-/opt/talos-mcp/venv/bin/python -m pip install dist/talos_mcp_server-0.4.0-py3-none-any.whl
+/opt/talos-mcp/venv/bin/python -m pip install dist/talos_mcp_server-0.4.1-py3-none-any.whl
 /opt/talos-mcp/venv/bin/talos-mcp-server --version
 ~~~
 
@@ -19,9 +19,9 @@ The package version is static metadata. A source checkout needs an editable inst
 
 The server can start without a Talos configuration file. In that state, talos_config_info, offline validation, and talos_version with client_only=true work. Authenticated node tools return CONFIG_REQUIRED. Set --talosconfig and, if needed, --context for cluster calls. The CLI uses that context for the server lifetime and passes it to each authenticated child.
 
-## Dependency maintenance (unreleased)
+## Dependency maintenance in 0.4.1
 
-The repository lock includes security updates for the 41 advisories in the [initial triage](docs/security/dependency-triage-20261024.md) and two additional advisories in the [dependency graph follow-up](docs/security/dependency-followup-20261024.md). Python 3.10 and MCP 1.x support remain in scope. This source change does not update an existing installed environment. Release and installation require separate qualification.
+The repository lock includes security updates for the 41 advisories in the [initial triage](docs/security/dependency-triage-20261024.md) and two additional advisories in the [dependency graph follow-up](docs/security/dependency-followup-20261024.md). Python 3.10 and MCP 1.x support remain in scope. Existing installed environments require a separate update. The lock fixes the recorded versions, but wheel metadata does not pin all transitive dependencies. Resolve and verify dependencies during installation.
 
 ## Profiles and tools
 
@@ -111,8 +111,8 @@ Version and health resources and the events tool include version-skew warnings b
 The Dockerfile reads .talosctl-version and verifies the matching amd64 or arm64 asset against talosctl-checksums.txt during build. It keeps audit logging off by default. Build an architecture explicitly:
 
 ~~~sh
-docker buildx build --platform linux/amd64 -t talos-mcp-server:v0.4.0-amd64 --load .
-docker run --rm -i --mount type=bind,src=/path/to/reader-talosconfig,dst=/run/talosconfig,readonly -e TALOS_MCP_TALOSCONFIG=/run/talosconfig talos-mcp-server:v0.4.0-amd64
+docker buildx build --platform linux/amd64 -t talos-mcp-server:v0.4.1-amd64 --load .
+docker run --rm -i --mount type=bind,src=/path/to/reader-talosconfig,dst=/run/talosconfig,readonly -e TALOS_MCP_TALOSCONFIG=/run/talosconfig talos-mcp-server:v0.4.1-amd64
 ~~~
 
 examples/ansible contains an idempotent, pinned installation example. It installs a reviewed wheelhouse and talosctl under a dedicated account. It does not copy credentials or connect client products.
