@@ -20,8 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Qualification
 
-- Earlier CI qualified the warning and dependency commits with 37 successful jobs. Those commits also passed local source checks, native installed-wheel checks and independent source review. The 0.4.1 metadata change requires its own qualification.
-- Release publication and deployed local/SSH client checks are tracked separately in [issue 13](https://github.com/CBEPX/talos-mcp-server/issues/13).
+- [Issue 13](https://github.com/CBEPX/talos-mcp-server/issues/13) records the release-specific source checks, independent review, platform CI, publication and deployed local/SSH client checks.
 
 ## [0.4.0] - 2026-09-27
 

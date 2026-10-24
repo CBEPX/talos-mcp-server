@@ -8,7 +8,7 @@ This change prepares version 0.4.1 metadata and release documentation. The appli
 
 ## Earlier qualification records
 
-## Version 0.4.0 delivery
+### Version 0.4.0 delivery
 
 The release candidate passed qualification on 2026-09-27. The final wheel SHA-256 is `8d2b09680f4180a340dcf1bbf7985d9a7338552030c3ca1c90a63918a59f5d66`.
 

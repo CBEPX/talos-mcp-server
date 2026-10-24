@@ -21,7 +21,7 @@ The server can start without a Talos configuration file. In that state, talos_co
 
 ## Dependency maintenance in 0.4.1
 
-The repository lock includes security updates for the 41 advisories in the [initial triage](docs/security/dependency-triage-20261024.md) and two additional advisories in the [dependency graph follow-up](docs/security/dependency-followup-20261024.md). Python 3.10 and MCP 1.x support remain in scope. Existing installed environments require a separate update. The lock fixes the recorded versions, but wheel metadata does not pin all transitive dependencies. Resolve and verify dependencies during installation.
+The repository lock includes security updates for the 41 advisories in the [initial triage](https://github.com/CBEPX/talos-mcp-server/blob/v0.4.1/docs/security/dependency-triage-20261024.md) and two additional advisories in the [dependency graph follow-up](https://github.com/CBEPX/talos-mcp-server/blob/v0.4.1/docs/security/dependency-followup-20261024.md). Python 3.10 and MCP 1.x support remain in scope. Existing installed environments require a separate update. The lock fixes the recorded versions, but wheel metadata does not pin all transitive dependencies. For a pinned installation, use the [reviewed Ansible wheelhouse flow](https://github.com/CBEPX/talos-mcp-server/blob/v0.4.1/examples/ansible/README.md).
 
 ## Profiles and tools
 

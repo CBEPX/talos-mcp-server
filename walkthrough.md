@@ -70,6 +70,6 @@ Record the wheel digest, CLI digest, Talos node version, command result, indepen
 
 ## Version 0.4.1 release acceptance
 
-Build and test the wheel with 0.4.1 metadata. Verify the published PyPI wheel and GitHub Release wheel attachment against the qualified tag CI artifact. Use new immutable directories for local and SSH installations. Preserve the prior release and reader credentials for rollback.
+Build and test the wheel with 0.4.1 metadata. Create the GitHub Release and attach the qualified tag CI wheel after publication. Verify that attachment and the PyPI wheel against the tag CI artifact. Use new immutable directories for local and SSH installations. Preserve the prior release and reader credentials for rollback.
 
-Generate the offline SSH wheelhouse under the target Python interpreter. Include the project wheel and marker-specific dependencies. Verify every copied wheel before installation. Recheck both read-only MCP transports through native stdio and real Codex/Claude clients. Confirm that disabled mutation calls return TOOL_NOT_ENABLED without dispatch. Repeat Ansible and require changed=0. Record exact publication, dependency and runtime evidence in issue 13 before closing the release task.
+Generate the offline SSH wheelhouse under the target Python interpreter. Include the project wheel and marker-specific dependencies. Verify every copied wheel before installation. Recheck both read-only launch modes through native stdio and real Codex/Claude clients. Confirm that disabled mutation calls return TOOL_NOT_ENABLED without dispatch. Repeat Ansible and require changed=0. Record exact publication, dependency and runtime evidence in issue 13 before closing the release task.
