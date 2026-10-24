@@ -33,6 +33,8 @@ uv run --no-project --python "$PYTHON" --with "mcp>=1.30,<2" --with pyyaml pytho
 
 Keep temporary constraints and raw receipts in the task-owned execution directory. Record the resolved package versions with the wheel digest. Current resolution can differ from the repository lock. Set PYTHON for each available interpreter. The existing CI matrix checks Python 3.10 through 3.14 on all three operating systems, with minimum/current SDK resolution. See the [advisory decisions](docs/security/dependency-triage-20261024.md) for scope and limits.
 
+For the [dependency graph follow-up](docs/security/dependency-followup-20261024.md), record certifi 2026.10.19 in the locked installed-wheel environment. Record the actual certifi version for current resolution. Record Black 26.10.1 in the development environment. Apply the same locked/current stdio and native cleanup checks.
+
 The live runner requires an operator-owned disposable VM. Create a private JSON manifest with absolute paths and an exact node. The manifest must name its owner. Do not store credentials or private addresses in this repository.
 
 ~~~json
