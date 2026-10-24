@@ -5,9 +5,9 @@ This role installs one reviewed wheelhouse and one checksum-pinned talosctl. It 
 Prepare a wheelhouse on the Ansible controller. Include the reviewed Talos MCP wheel and all pinned dependency wheels. Record the project wheel SHA-256. Set a unique release ID for each build. Supply these variables through a private vars file:
 
 ~~~yaml
-talos_mcp_release_id: v0.4.0-reviewed-build
+talos_mcp_release_id: v0.4.1-reviewed-build
 talos_mcp_wheelhouse: /path/to/reviewed/wheelhouse
-talos_mcp_wheel_file: talos_mcp_server-0.4.0-py3-none-any.whl
+talos_mcp_wheel_file: talos_mcp_server-0.4.1-py3-none-any.whl
 talos_mcp_wheel_sha256: REPLACE_WITH_64_HEX_DIGITS
 talos_mcp_talosctl_sha256: REPLACE_WITH_MATCHING_RELEASE_AND_ARCH_SHA256
 ~~~

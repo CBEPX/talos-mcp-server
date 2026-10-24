@@ -267,7 +267,7 @@ async def check_mcp(executable: Path, talosctl: Path, root: Path, compatibility_
             ClientSession(reader, writer) as session,
         ):
             initialized = await session.initialize()
-            assert initialized.serverInfo.version == "0.4.0"
+            assert initialized.serverInfo.version == "0.4.1"
             names = {item.name for item in (await session.list_tools()).tools}
             assert names == set(tools.split(","))
             assert (await session.list_prompts()).prompts
